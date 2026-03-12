@@ -1,3 +1,5 @@
+# 09.03.2026
+
 ## 08.03.2026
 - Finished the NVIDIA free online course "A Beginner's Guide to Autonomous Robots"
 
