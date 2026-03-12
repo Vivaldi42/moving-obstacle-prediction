@@ -2,7 +2,7 @@
 
 Embodied AI, a subset of physical AI, enables robots to interact with the physical world in increasingly sophisticated ways.
 
-![[embodied_ai_overview.png]]
+![Embodied AI overview](../Images/embodied_ai_overview.png)
 
 Perception receives what is happening in the world, that output is sent to the cognition, or the brain of the robot, and then the robot takes actions to interact with the world.
 
@@ -75,7 +75,7 @@ Controllers process sensor data, execute control algorithms, and facilitate comm
 
 # Autonomy Software Architecture
 
-![[auto_software_arch.png]]
+![Autonomy software architecture](../Images/auto_software_arch.png)
 
 This diagram provides an overview of a relatively complex autonomy software architecture, often used in applications like robotaxis. It illustrates the integration of various components essential for autonomous systems, though some robots may only use a subset of these elements.
 

@@ -7,7 +7,7 @@
 
 ### Eindhoven
 
-![[point_cloud.jpeg]]
+![Point cloud example](./Images/point_cloud.jpeg)
 
 
 ---

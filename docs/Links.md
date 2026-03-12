@@ -1,11 +1,13 @@
-This is your new *vault*.
+# Links
 
-Make a note of something, [[create a link]], or try [the Importer](https://help.obsidian.md/Plugins/Importer)!
+- [Major platforms and initiatives launched by Google in 2025](https://medium.com/@anmolkohli/major-platforms-and-initiatives-launched-by-google-in-2025-7ebd7c4cb80a)
+- [OpenGL tutorial playlist](https://www.youtube.com/watch?v=1dq7mMort9o&list=PL1oDmcs0xTD-dJN1PL2N1urX0EKupBJCQ&index=13)
+- [EU bid for tech autonomy faces pushback from the US](https://www.politico.eu/article/eu-bid-for-tech-autonomy-washington-us-pushes-back/)
+- [Artec Leo portable 3D scanner](https://www.artec3d.com/portable-3d-scanners/artec-leo)
+- [Princeton RGB-D dataset](https://rgbd.cs.princeton.edu/)
+- [MyBotShop MBS Rovo 2 announcement](https://www.mybotshop.de/MYBOTSHOP-is-launching-MBS-ROVO2)
 
-When you're ready, delete this note and make the vault your own.
-
-https://medium.com/@anmolkohli/major-platforms-and-initiatives-launched-by-google-in-2025-7ebd7c4cb80a
-
+## Notes
 
 opengl
 
@@ -17,7 +19,6 @@ https://www.artec3d.com/portable-3d-scanners/artec-leo
 
 https://rgbd.cs.princeton.edu/
 
-
 RGB-D
 
 omnivision
@@ -25,3 +26,9 @@ omnivision
 ai models torrent for training
 
 https://www.mybotshop.de/MYBOTSHOP-is-launching-MBS-ROVO2
+
+
+- OpenGL
+- RGB-D
+- OmniVision
+- AI models for training

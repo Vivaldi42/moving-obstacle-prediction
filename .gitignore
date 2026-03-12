@@ -1,6 +1,6 @@
-docs/.obsidian/workspace.json
-docs/.obsidian/cache
-docs/.obsidian/workspace-mobile.json
+# Obsidian vault metadata and local editor state
+docs/.obsidian/
 
-docs/.obsidian/plugins
-docs/.obsidian/themes
+# OS/editor noise
+.DS_Store
+Thumbs.db
