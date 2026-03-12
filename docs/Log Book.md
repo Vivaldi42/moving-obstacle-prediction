@@ -1,0 +1,74 @@
+## 08.03.2026
+- Finished the NVIDIA free online course "A Beginner's Guide to Autonomous Robots"
+
+## 07.03.2026
+- Continued further with the NVIDIA free online course "A Beginner's Guide to Autonomous Robots"
+
+## 06.03.2026
+- ZED SDK configuration
+	- Finally fixed the ZED SDK configuration (fixed problems with the right versions of CUDA, TensorRT, OpenGL (switched from `llvmpipe` to `NVIDIA` renderer). Remaining Issue `ZED_Diagnostic` tool crashes with segmentation fault.  Not critical:  
+		- `ZED_Depth_Viewer` works  
+		- Python SDK camera open test works  
+	- Final Status: ZED SDK is configured and ready to use.
+
+## 05.03.2026
+
+## 04.03.2026
+- Had a meeting with Martin and Edwin to show them the project plan. They gave me feedback what needs to be changed and we discussed what to work on in the coming two sprints.
+- I wrote down the feedback they gave me.
+## 03.03.2026
+- Finished the project plan and sent it for review to Edwin, Martin and Mark.
+
+## 02.03.2026
+
+## 01.03.2026
+- Worked on the project plan.
+- 
+## 28.02.2026
+- 
+
+## 27.02.2026
+- 
+
+## 26.02.2026
+- 
+
+## 16.02.2026
+- Found educational courses by Nvidia
+
+## 15.02.2026
+- Researched 3D point clouds, object detection and recognition, technologies developed by Nvidia
+- Chat with Edwin: sent him the videos of DA3, he said that we can make a demo video of the whole floor at TQ 5.2; DA3 can work with video as input
+- Researched the ZED SDK and found how many functionalities are already implemented
+
+## 13.02.2026
+- Prepared for a meeting with Bart - The Gate Insitute
+- A meeting with Bart - The Gate Institute: showed him a technical mini canvas. He said that 1. What and 3. Leap fordward need to be altered slightly but in general it's good. The next step is to perform market research
+- Jan shared with me his attempt to start a company in 2008-2009. He showed me his presentation and gave me very valuable information about his experience
+- Learnt about people vibe coding entire apps in just a weekend and the incredible speed of tech innovation
+- Learnt about Nvidia Earth-2 and was amazed by the exponential growth of technology
+
+## 12.02.2026
+- Update session meeting: intro to lectoraat interns at TQ
+- Installed DA3, run it and generated a point cloud of some objects and the room. A very nice achievement!
+
+## 11.02.2026
+- Prepared for the first meeting with Edwin and Martin
+- Had the first meeting with Edwin and Martin
+- Researched what are point clouds and found Depth Anything v3 (DA3)
+- Showed DA3 to Edwin and he gave me a task to run it on bigboipc and make a point cloud of the the room
+- Went to Tony's and Pom with Edwin and discussed business topics, then I helped him to run the printer at Pom
+
+## 10.02.2026
+- Had a meeting with Mark and dicussed the project
+- Wrote the notes from the meeting with Mark in Feedpulse
+- Tried to set up Nvidia Cosmos
+- Attended IXD update meeting where Iman presented the progress on his research
+- Attended a KickOff Ehv event with the Picnic CTO and got in touch with him
+
+## 09.02.2026
+- Set up Firefox as the default browser
+- Attended Internship Kick-off with Pim
+- Contacted Mark Beks (1st assessor) and arranged an intro meeting with him
+- Arranged an intro meeting with Edwin and Martin
+- Tried to finish the configuration of Nvidia Cosmos I started last week
