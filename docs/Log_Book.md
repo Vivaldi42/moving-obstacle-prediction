@@ -1,5 +1,23 @@
-# 09.03.2026
 
+# 13.03.2026
+- Tested tailscale communication between my pc and the bigboi.
+- Configured remote desktop communication between my pc and the bigboi.
+- Talked with Jan about potential business opportunities in mobile robotics and about working space.
+
+# 12.03.2026
+- Git repo set up, Codex set up.
+- Experimented with the ZED SDK.
+
+# 11.03.2026
+- Had a weekly meeting with Edwin and Martin.
+- Experimented with the ZED SDK.
+
+# 10.03.2026
+- Finally set up the ZED SDK (by installing it again).
+- Talked with Edwin about in-memory computing and the possibility to participate in the KickOff pre-accelerator.
+
+# 09.03.2026
+- Participated in the 1st graduation table meeting.
 ## 08.03.2026
 - Finished the NVIDIA free online course "A Beginner's Guide to Autonomous Robots"
 

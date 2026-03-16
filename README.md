@@ -1,93 +1,59 @@
-# Obstacle_Prediction
+# Dynamic Obstacle Detection and Prediction
+
+## Context
+
+This project is conducted within the High Tech Embedded Software (HTES) research group at Fontys University of Applied Sciences in Eindhoven. The group focuses on applied software research for high-tech embedded systems and mobile robotics. :contentReference[oaicite:0]{index=0}
+
+Several robotics projects within HTES share a common limitation: the lack of a reliable system for detecting, tracking, and predicting the motion of dynamic obstacles using 3D depth perception. Existing systems rely mainly on classical perception pipelines and reactive obstacle avoidance, while recent AI-based approaches such as world models have not yet been systematically explored in this context. :contentReference[oaicite:1]{index=1}
+
+The goal of this project is to design and evaluate a modular perception pipeline that can be reused across different HTES robotics platforms such as the Brum (Self-Driving Challenge), Jackal UGV, Boomba triangular robot platform, and Avular Origin One. :contentReference[oaicite:2]{index=2}
 
 
+## Problem Description
 
-## Getting started
+Mobile robots operating in dynamic environments must perceive moving objects and anticipate their behavior to operate safely and effectively. Current systems in the HTES context primarily detect obstacles from depth sensors but lack robust mechanisms for tracking objects and predicting their motion. :contentReference[oaicite:3]{index=3}
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+The core problem is the absence of an object-centric perception pipeline capable of:
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+- Detecting arbitrarily moving objects from depth data  
+- Maintaining consistent object identities over time (multi-object tracking)  
+- Predicting short-term future motion of those objects  
 
-## Add your files
+Without motion prediction, robotic systems react only to the current state of the environment. This limits the ability of navigation and planning modules to anticipate changes in dynamic scenes. Technical challenges include noisy depth data, point-cloud segmentation under clutter or occlusions, reliable data association across frames, and maintaining real-time performance. :contentReference[oaicite:4]{index=4}
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
 
-```
-cd existing_repo
-git remote add origin https://projects.fhict.nl/htes-lectoraat/autonomous-driving/obstacle_prediction.git
-git branch -M main
-git push -uf origin main
-```
+## Solution Overview
 
-## Integrate with your tools
+The project proposes the development of a modular 3D perception and motion prediction pipeline. The system converts raw 3D sensor data (e.g., depth cameras, LiDAR, RGB-D) into structured information about dynamic obstacles. :contentReference[oaicite:5]{index=5}
 
-- [ ] [Set up project integrations](https://projects.fhict.nl/htes-lectoraat/autonomous-driving/obstacle_prediction/-/settings/integrations)
+The pipeline consists of three main components:
 
-## Collaborate with your team
+1. **Detection** – identifying object-level entities from 3D sensor data  
+2. **Tracking** – maintaining stable object identities across frames  
+3. **Prediction** – estimating short-term future motion with quantified uncertainty  
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+The architecture is designed to be modular so that different detection, tracking, or prediction methods can be evaluated and replaced independently. The implementation is expected to support real-time or near-real-time operation and integrate with robotics software stacks such as ROS2. :contentReference[oaicite:6]{index=6}
 
-## Test and Deploy
 
-Use the built-in continuous integration in GitLab.
+## Expected Contribution
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+The project aims to provide the following contributions:
 
-***
+- A modular perception pipeline for detecting, tracking, and predicting dynamic obstacles  
+- An empirical comparison between classical robotics methods and newer world-model approaches  
+- Experimental validation of the approaches under controlled conditions  
+- A reusable perception module that can support multiple HTES mobile robotics projects  
 
-# Editing this README
+The results are intended to clarify whether world models represent a practical direction for future robotics perception research within the HTES group. :contentReference[oaicite:7]{index=7}
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
 
-## Suggestions for a good README
+## Preconditions
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+The project is conducted under several practical constraints:
 
-## Name
-Choose a self-explaining name for your project.
+- Development follows an Agile workflow using a Git issue board  
+- Source code is managed using GitLab  
+- Experiments may use dedicated compute resources (e.g., the “bigboi” PC)  
+- Hardware resources such as depth cameras are available through the ISSD  
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+These conditions define the technical and organizational environment in which the perception system will be developed and evaluated. :contentReference[oaicite:8]{index=8}

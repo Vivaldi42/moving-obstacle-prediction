@@ -1,5 +1,5 @@
+<!-- omit in toc -->
 # Dynamic Obstacle Detection and Prediction
-
 
 ### Author: Vladislav Stefanov
 
@@ -11,14 +11,35 @@
 
 
 ---
-
+<!-- omit in toc -->
 # Project plan
 
-## March 3rd, 2026
+## March 16th, 2026
 
+<div style="page-break-after: always;"></div>
 
+<!-- omit in toc -->
 # Table of Contents
+1. [1. Context](#1-context)
+2. [2. Problem Description](#2-problem-description)
+3. [3. Solution](#3-solution)
+   1. [3.1 Overview](#31-overview)
+   2. [3.2 Scope](#32-scope)
+      1. [Phase 1 - Problem Understanding](#phase-1---problem-understanding)
+      2. [Phase 2 - State-of-the-Art Review and Experimental Exploration](#phase-2---state-of-the-art-review-and-experimental-exploration)
+      3. [Phase 3 - Evaluation and Comparison](#phase-3---evaluation-and-comparison)
+      4. [Out-of-Scope (Current Definition)](#out-of-scope-current-definition)
+   3. [3.3 Expected Contribution](#33-expected-contribution)
+4. [4. Pre-Conditions](#4-pre-conditions)
+5. [5. Research Questions](#5-research-questions)
+6. [6. Approach](#6-approach)
+7. [7. Learning Outcomes](#7-learning-outcomes)
+8. [8. Time Plan](#8-time-plan)
+9. [9. Stakeholders and Communication](#9-stakeholders-and-communication)
+10. [10. Risk Management](#10-risk-management)
+11. [11. References](#11-references)
 
+<div style="page-break-after: always;"></div>
 
 # 1. Context
 
@@ -56,9 +77,9 @@ From a technical perspective, the problem involves several challenges:
 ## 3.1 Overview
 
 The final output of the project is a **modular 3D perception and motion prediction pipeline** that transforms raw depth measurements into:
-1. Object-level detections
-2. Stable object identities over time (multi-object tracking)
-3. Short-term motion predictions with quantified uncertainty
+1. Object-level **detections**
+2. Stable object identities over time (multi-object **tracking**)
+3. Short-term motion **predictions** with quantified uncertainty
 
 The system must:
 - Operate on 3D sensor data (depth data, LiDAR or RGB-D).
@@ -113,6 +134,8 @@ Topics to research, experiment with and evaluate:
 - Depth Anything v3
 - Isaac Perceptor
 - Dino v2
+- ConceptGraphs
+- ...
 
 **Practical and Educational Resources**
 - NVIDIA free online robotics and computer vision courses
@@ -171,14 +194,14 @@ Main research question:
 Sub-questions:
 - What are the technical problems with depth-based perception and why are they problems?
 - What technologies solving similar problems are available (both classical and state-of-the-art)?
-- How to implement those technologies and compare them?
-- What metrics are appropriate to define evaluation criteria for the experiments?
+- How to implement one of the available methods and investigate its capabilities?
+- What evaluation criteria/metrics are suitable for comparison between different approaches?
 
 ---
 
 # 6. Approach
 
-During the internship, I will be using the Agile approach working with a Git issue board and  2- or 3-week-long sprints. A sprint review meeting will be held at the end of each sprint to discuss the progress and show a demo if requested. We will have weekly meetings with the company mentor and the product owner and another meeting with the first assessor to update them on my progress and ask for feedback.
+During the internship, I will be using the Agile Scrum approach working with a Git issue board and 2- or 3-week-long sprints. During each sprint, I will perform a research-implement-test cycle for different technologies, sharing the results with the stakeholders. The decision what to work on during a sprint will depend on the stakeholders and will be decided at the beginning of the sprint. We will have weekly meetings with the company mentor and the product owner and another meeting with the first assessor to update them on my progress and ask for feedback.
 
 ---
 
@@ -195,10 +218,25 @@ During the internship, I will be using the Agile approach working with a Git iss
 
 # 8. Time Plan
 
-The table shows visually the planning during the internship. As technical products are difficult to
-predict precisely timewise, the table can be updated accordingly during the project.
+The internship planning is split in five sprints with a length of three weeks on average, followed by the graduation conference. Additionally, there are four portfolio submissions in total I need to provide evidences for.
 
-![Timeline](timeplan.jpeg)
+| Sprint N              | Duration        |
+| --------------------- | --------------- |
+| Sprint 1              | Mar 19 - Apr 8  |
+| Sprint 2              | Apr 9 - Apr 24  |
+| Sprint 3              | May 6 - May 27  |
+| Sprint 4              | May 28 - Jun 17 |
+| Sprint 5              | Jun 18 - Jul 10 |
+| Graduation conference | Jul 13 - Jul 17 |
+
+| Portfolio Submission                                 | Date       |
+| ---------------------------------------------------- | ---------- |
+| Portfolio snapshot 1 including project plan (week 5) | March 20th |
+| Portfolio snapshot for midterm review (week 10)      | April 24th |
+| Concept of final portfolio (week 15)                 | June 5th   |
+| Final portfolio submission (week 17)                 | June 17th  |
+
+![Timeplan](./Timeplan/excel_timeplan.png)
 
 
 ---
@@ -230,4 +268,4 @@ predict precisely timewise, the table can be updated accordingly during the proj
 
 # 11. References
 
-https://scrumguides.org/scrum-guide.html
+Scrum Guide | Scrum guides. (n.d.). https://scrumguides.org/scrum-guide.html
