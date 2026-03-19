@@ -1,3 +1,10 @@
+# 16.03.2026
+First company visit with Mark and Edwin - narrowing down the scope:
+- In the coming weeks focus on ZED SDK and its API: body tracking, positional tracking,... Probably the features of detection and tracking of humans can be fully reused from ZED SDK. After that you can focus on prediction of humans.
+- Make several input datasets (pictures, videos) with a ZED camera and use them as a repeatable and controlled experiment for comparing different approaches.
+- Research the classic methods a little bit, eg how classic vision works for following a moving ball.
+- Lidar is probably out of scope.
+- 
 ## 09.03.2026
 Graduation Table Meeting 1: Planning and project organization
 - You need to define measurable and testable acceptance criteria for the project to pass.

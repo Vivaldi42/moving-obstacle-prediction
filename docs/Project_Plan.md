@@ -1,20 +1,22 @@
 <!-- omit in toc -->
 # Dynamic Obstacle Detection and Prediction
 
+<!-- omit in toc -->
+# Project plan
+
 ### Author: Vladislav Stefanov
 
 ### Fontys University of Applied Sciences
 
 ### Eindhoven
 
+## March 16th, 2026
+
 ![Point cloud example](./Images/point_cloud.jpeg)
 
 
----
-<!-- omit in toc -->
-# Project plan
 
-## March 16th, 2026
+
 
 <div style="page-break-after: always;"></div>
 
@@ -38,6 +40,15 @@
 9. [9. Stakeholders and Communication](#9-stakeholders-and-communication)
 10. [10. Risk Management](#10-risk-management)
 11. [11. References](#11-references)
+
+---
+
+<!-- omit in toc -->
+# Version History
+| Version | Date | Ammendment |
+| --- | --- | --- |
+| 0.1 | 03.03.2026 | First version ready for review |
+| 1.0 | 16.03.2026 | Applying feedback from stakeholders on research questions and timeplan|
 
 <div style="page-break-after: always;"></div>
 
@@ -121,7 +132,7 @@ Topics to research, experiment with and evaluate:
 - Physics-based game engines for simulation
 
 **State-of-the-Art**
-- ZED SDK
+- ZED SDK (highest priority)
 - Structured motion representations (SMORE)
 - World models for dynamic environments
 - NVIDIA Cosmos

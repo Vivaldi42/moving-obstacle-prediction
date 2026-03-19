@@ -1,3 +1,14 @@
+# 18.03.2026
+- Had a meeting with Martin and Edwin.
+- Created an issue board for the coming 1/2 sprints.
+
+# 17.03.2026
+- Went through ZED SDK tutorials and researched the ZED repo.
+
+# 16.03.2026
+- Finished the first version of the project plan incl. feedback from Martin and Mark.
+- Had the 1st company visit with Mark and Edwin.
+- Had a meeting with Edwin and Teade to discuss my project.
 
 # 13.03.2026
 - Tested tailscale communication between my pc and the bigboi.
@@ -36,6 +47,7 @@
 ## 04.03.2026
 - Had a meeting with Martin and Edwin to show them the project plan. They gave me feedback what needs to be changed and we discussed what to work on in the coming two sprints.
 - I wrote down the feedback they gave me.
+ 
 ## 03.03.2026
 - Finished the project plan and sent it for review to Edwin, Martin and Mark.
 
@@ -43,7 +55,7 @@
 
 ## 01.03.2026
 - Worked on the project plan.
-- 
+ 
 ## 28.02.2026
 - 
 

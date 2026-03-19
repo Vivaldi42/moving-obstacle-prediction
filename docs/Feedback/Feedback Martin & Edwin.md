@@ -1,3 +1,19 @@
+# 18.03.2026
+- Put all issues you think are needed during the project in the backlog. Put subtasks in issues. Make a proposal git board and send it to Martin.
+- Use sprints as milestones and write down sprint goals.
+- Be unambiguous and concrete in documentation.
+- Run ZED body tracking + trajectory. 1st humans then other objects. How to go from humans to arbitrary objects?
+
+- Research what hardware is needed for ZED SDK? 
+- Your system must be a reproducible and portable package (can be reused on the big PC, the Jetson,...). Ensure that it can work on different devices. How to measure performance on different HW e.g., FPS)
+ 
+- Issue: Investigate the basics of Docker and implement a Docker machine that runs ZED SDK on big PC. Which base image is best for ZED SDK? Big PC is AMD and Orin is ARM but Docker runs on both. You can arrange a meeting with Martin to help with Docker. dockerhub? VM? container? dev container (don't use this, spend a little time on it)? image? how to access HW from container? install docker, run webserver in Docker. figure out if ZED SDK can run in Docker and did someone use it online.
+
+- New issues:
+	- Docker
+	- ZED SDK demo
+	- Input for repeatable experiments
+
 ## 11.03.2026
 - Project organization: Use an issue board (in this order):
 	- product goal
