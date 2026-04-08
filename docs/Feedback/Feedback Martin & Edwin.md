@@ -1,3 +1,14 @@
+# Feedback from Martin (product owner) and Edwin (company mentor)
+
+# 25.03.2026
+- SDC Brum: Check Edwin's original design of the Brum and research Zenoh and ZeroMQ.
+- Stream live video on both big PC and Jetson. Use different base images for bigboi and Jetson.
+- Check if X11 can run on Jetson.
+- When doing research (eg on CV, robotics, autnav): 1) take a step back; look at what you need to deliver 2) what level of detail provides enough understanding so I can move forward and solve the problem at hand. Ask yourself what question would you ask an expert related to this topic. To have intuitive understanding is enough for many terms.
+- Maybe depth map is enough and point clouds are not needed.
+- Research the tradeoff between RDB, RGB-D and point clouds.
+- What is the pipeline input -> ? -> depth map.
+
 # 18.03.2026
 - Put all issues you think are needed during the project in the backlog. Put subtasks in issues. Make a proposal git board and send it to Martin.
 - Use sprints as milestones and write down sprint goals.
@@ -5,7 +16,7 @@
 - Run ZED body tracking + trajectory. 1st humans then other objects. How to go from humans to arbitrary objects?
 
 - Research what hardware is needed for ZED SDK? 
-- Your system must be a reproducible and portable package (can be reused on the big PC, the Jetson,...). Ensure that it can work on different devices. How to measure performance on different HW e.g., FPS)
+- Your system must be a reproducible and portable package (can be reused on the big PC, the Jetson,...). Ensure that it can work on different devices. How to measure performance on different HW e.g., FPS?
  
 - Issue: Investigate the basics of Docker and implement a Docker machine that runs ZED SDK on big PC. Which base image is best for ZED SDK? Big PC is AMD and Orin is ARM but Docker runs on both. You can arrange a meeting with Martin to help with Docker. dockerhub? VM? container? dev container (don't use this, spend a little time on it)? image? how to access HW from container? install docker, run webserver in Docker. figure out if ZED SDK can run in Docker and did someone use it online.
 

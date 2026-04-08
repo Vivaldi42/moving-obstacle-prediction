@@ -1,3 +1,35 @@
+# 26.03.2026
+
+# 25.03.2026
+- I researched Docker more.
+- Had a meeting with Edwin and Martin about the progress.
+- Had a meeting with O Sigma to talk about Kickoff.
+
+# 24.03.2026
+- I talked with Pim about the triangular robot platform.
+- I researched Docker and made a Docker container.
+
+# 23.03.2026
+- Talked with Edwin about what to focus on. He showed me his online repo of textbooks (https://dmx.e3n.nl/). He advised me to work on Docker.
+- With Edwin we moved the bigboi PC to the smart systems lab and set up my working space there.
+- I started researching Docker.
+
+# 22.03.2026
+- Tried to read the SDC docs but it wasn't very successful (missing docs). Made a system design diagram using ChatGPT that resembles what a real system would look like.
+
+# 21.03.2026
+- Researched terms related to CV and robotics.
+
+# 20.03.2026
+- Worked on the research docs about intro to robotics.
+- Submitted the first version of the portfolio.
+
+# 19.03.2026
+- Talked with Edwin and Dancho about creating an advanced Boomba for the educational market.
+- Researched robotics and computer vision.
+- Made a body detection and tracking demo using the ZED SDK.
+- Went to the drones race event.
+
 # 18.03.2026
 - Had a meeting with Martin and Edwin.
 - Created an issue board for the coming 1/2 sprints.

@@ -1,10 +1,30 @@
+# 30.03.2026
+- Check latency requirements with Martin and Edwin -> ensure it's fast enough so it doesn't collide with people
+- Maybe Jetson Nano isn't powerful enough; use Jestson Orin
+- Maybe apply trimming (cut off the background)
+- Segmentation on a depth map?
+- Look at this YOLO link: https://arxiv.org/pdf/2403.00175
+- Good progress with narrowing down the scope and getting more concrete
+- Final presentation:
+	- Publicly accessible in a room at R10
+	- Tell how many people will attend in advance
+	- 20 min presentation (show a demo)
+	- Q&A from the audience
+	- Q&A from the assessors
+	
+# 20.03.2026
+First portfolio submission from Mark (orienting on everything):
+- LO1 Professional Duties: Good initial research document. This is fine for this early stage. For next time, I would like to see more of a motivated decision, preferably supported by hard data.
+- LO2 Situation Orientation: I see some valuable ideas that might lead to demonstrable value for stakeholders, but it will be essential to start go from the initial wide brainstorm type of approach to a more focused effort.
+- LO3 Professional Standards: Good start
+
 # 16.03.2026
 First company visit with Mark and Edwin - narrowing down the scope:
 - In the coming weeks focus on ZED SDK and its API: body tracking, positional tracking,... Probably the features of detection and tracking of humans can be fully reused from ZED SDK. After that you can focus on prediction of humans.
 - Make several input datasets (pictures, videos) with a ZED camera and use them as a repeatable and controlled experiment for comparing different approaches.
 - Research the classic methods a little bit, eg how classic vision works for following a moving ball.
 - Lidar is probably out of scope.
-- 
+
 ## 09.03.2026
 Graduation Table Meeting 1: Planning and project organization
 - You need to define measurable and testable acceptance criteria for the project to pass.

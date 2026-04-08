@@ -1,14 +1,46 @@
-# Overview of Embodied AI
+# Dynamic Obstacle Detection and Prediction
 
-Embodied AI, a subset of physical AI, enables robots to interact with the physical world in increasingly sophisticated ways.
+# Autonomous Robots Research Document
 
-![Embodied AI overview](../Images/embodied_ai_overview.png)
+### Author: Vladislav Stefanov
 
-Perception receives what is happening in the world, that output is sent to the cognition, or the brain of the robot, and then the robot takes actions to interact with the world.
+### Fontys University of Applied Sciences
+
+### Eindhoven
+
+## March 20th, 2026
+
+---
+# Version History
+| Version | Date       | Ammendment                                        |
+| ------- | ---------- | ------------------------------------------------- |
+| 1.0     | 20.03.2026 | First version of the document - basic terminology |
 
 # Autonomous Navigation
 
-Allows robots to move independently through various environments, making decisions about their path and avoiding obstacles without human intervention.
+Autonomous navigation is the capability of machines, such as robots and autonomous vehicles, to plan their path and execute movement without human intervention, utilizing data captured from onboard sensors and sometimes remote navigation aids. This process involves perceiving the environment and moving through it with minimal or no human input. The interdisciplinary nature of autonomous navigation encompasses artificial intelligence, robotics, sensor data processing, and control systems, as these systems integrate sensors to provide environmental perception and process this information through AI algorithms for path-planning and obstacle avoidance. The evolution of autonomous navigation technologies has roots in robotics, aviation, and automotive industries, with early research focusing on machines capable of performing tasks independently and later expanding to mobile robotics and unmanned vehicles capable of navigating dynamic environments. Autonomous navigation includes:
+1. Perception and sensing
+2. Localization and mapping
+3. Path planning and decision making
+4. Control systems
+
+# Embodied AI
+
+Physical AI is the umbrella term for AI that interacts with the physical world (e.g., robots). Embodied AI is a specialized, often considered a subset, of this area, focusing on systems where the AI's "body" (physical or simulated) is critical for its learning, perception, and reasoning. Embodied AI refers to the integration of artificial intelligence into physical systems, enabling them to interact with the physical world. These systems can include general-purpose robots, humanoid robots, autonomous vehicles (AVs), and even factories and warehouse facilities. The fusion of machine learning, sensors, and computer vision lets these systems perceive, reason, and act in real-world environments.
+
+![Embodied AI overview](embodied_ai_overview.png)
+
+Perception receives what is happening in the world, that output is sent to the cognition, or the brain of the robot, and then the robot takes actions to interact with the world.
+
+The diagram represents the **sense–think–act loop**, showing how a robot interacts with its environment through a continuous feedback cycle.
+- **Perception** receives data from the world via sensors (e.g., cameras, LiDAR, depth sensors). It converts raw signals into structured information such as objects, positions, or maps.
+- **Cognition** processes this information. It includes reasoning, planning, and decision-making. Based on the perceived state, the system determines what action should be taken.
+- **Action** executes the decision through actuators (motors, controllers), affecting the physical world.
+
+The world is both input and output: it provides observations to perception and is modified by the robot’s actions. This creates a closed loop where each action changes future perception.
+
+This loop runs continuously in real time. In autonomous systems, performance depends on how accurately perception models the world, how effectively cognition plans, and how reliably actions are executed under uncertainty.
+
 
 # Object Manipulation
 
@@ -75,7 +107,7 @@ Controllers process sensor data, execute control algorithms, and facilitate comm
 
 # Autonomy Software Architecture
 
-![Autonomy software architecture](../Images/auto_software_arch.png)
+![Autonomy software architecture](auto_software_arch.png)
 
 This diagram provides an overview of a relatively complex autonomy software architecture, often used in applications like robotaxis. It illustrates the integration of various components essential for autonomous systems, though some robots may only use a subset of these elements.
 
@@ -336,3 +368,17 @@ While foundation models offer significant advancements, several challenges remai
 
 
 These challenges present opportunities for innovation, driving the development of more capable and adaptable robotic systems.
+
+# References
+
+Nvidia Glossary
+
+https://www.nvidia.com/en-us/glossary/
+
+Understanding Sensor Fusion and Tracking by Matlab - YouTube
+
+https://youtube.com/playlist?list=PLn8PRpmsu08ryYoBpEKzoMOveSTyS-h4a&si=waFRcquUgr6DjGmW
+
+Autonomous Navigation - ScienceDirect
+
+https://www.sciencedirect.com/topics/computer-science/autonomous-navigation
