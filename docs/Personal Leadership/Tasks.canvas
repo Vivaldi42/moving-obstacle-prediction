@@ -1,0 +1,25 @@
+{
+	"nodes":[
+		{"id":"8d16034e5909d1a5","x":-620,"y":-480,"width":250,"height":100,"type":"text","text":"Detection and tracking demo using ZED SDK\n**Deadline:10.04.2026**"},
+		{"id":"90f06e4b3f9a0a92","type":"text","text":"Define evaluation criteria for comparison between diff. methods","x":-195,"y":-480,"width":250,"height":80},
+		{"id":"273d8fce4e3f4bd6","type":"text","text":"Record videos for comparison between diff. methods","x":165,"y":-485,"width":250,"height":90},
+		{"id":"1dfd63f4ac219af1","type":"text","text":"Investigate diff. functionalities of ZED SDK","x":-1280,"y":-460,"width":250,"height":60},
+		{"id":"e33c902076ed1176","type":"text","text":"Human detection and tracking using ZED SDK","x":-960,"y":-460,"width":250,"height":60},
+		{"id":"21c948245bf64aa4","x":-745,"y":-280,"width":250,"height":60,"type":"text","text":"Docker env on big PC"},
+		{"id":"fdf9161fd0bcbacd","type":"text","text":"Docker portable environment (both on big PC and Jetson)","x":-745,"y":-90,"width":250,"height":90},
+		{"id":"4697aea3d9a5d5cb","x":-520,"y":-170,"width":250,"height":60,"type":"text","text":"Docker env on Jetson"},
+		{"id":"070badcaa58a78ff","type":"text","text":"Intro to robotics research doc","x":-370,"y":-310,"width":250,"height":60},
+		{"id":"130a2ecb105c425c","type":"text","text":"Understand the architecture of Brum","x":-70,"y":-310,"width":250,"height":60},
+		{"id":"280f99dcd1bbe458","type":"text","text":"Try out Yolo26","x":290,"y":-310,"width":250,"height":60},
+		{"id":"3fa471929c450186","x":-995,"y":-640,"width":250,"height":60,"type":"text","text":"This week"},
+		{"id":"d583c714bab11654","type":"text","text":"Next week","x":-40,"y":-640,"width":250,"height":60}
+	],
+	"edges":[
+		{"id":"f335ac7533ad34fc","fromNode":"1dfd63f4ac219af1","fromSide":"right","toNode":"e33c902076ed1176","toSide":"left"},
+		{"id":"c2a371f3baca424a","fromNode":"90f06e4b3f9a0a92","fromSide":"right","toNode":"273d8fce4e3f4bd6","toSide":"left"},
+		{"id":"18ce2f420f7354ca","fromNode":"e33c902076ed1176","fromSide":"right","toNode":"8d16034e5909d1a5","toSide":"left"},
+		{"id":"74ed5ba44307faba","fromNode":"fdf9161fd0bcbacd","fromSide":"top","toNode":"21c948245bf64aa4","toSide":"bottom"},
+		{"id":"78ddbd5948700308","fromNode":"21c948245bf64aa4","fromSide":"top","toNode":"8d16034e5909d1a5","toSide":"left"},
+		{"id":"1b2dc8bb24469378","fromNode":"fdf9161fd0bcbacd","fromSide":"top","toNode":"4697aea3d9a5d5cb","toSide":"left"}
+	]
+}
