@@ -1,18 +1,22 @@
 {
 	"nodes":[
-		{"id":"8d16034e5909d1a5","x":-620,"y":-480,"width":250,"height":100,"type":"text","text":"Detection and tracking demo using ZED SDK\n**Deadline:10.04.2026**"},
+		{"id":"8d16034e5909d1a5","type":"text","text":"Detection and tracking demo using ZED SDK\n**Deadline:10.04.2026**","x":-620,"y":-480,"width":250,"height":100},
 		{"id":"90f06e4b3f9a0a92","type":"text","text":"Define evaluation criteria for comparison between diff. methods","x":-195,"y":-480,"width":250,"height":80},
 		{"id":"273d8fce4e3f4bd6","type":"text","text":"Record videos for comparison between diff. methods","x":165,"y":-485,"width":250,"height":90},
-		{"id":"1dfd63f4ac219af1","type":"text","text":"Investigate diff. functionalities of ZED SDK","x":-1280,"y":-460,"width":250,"height":60},
 		{"id":"e33c902076ed1176","type":"text","text":"Human detection and tracking using ZED SDK","x":-960,"y":-460,"width":250,"height":60},
-		{"id":"21c948245bf64aa4","x":-745,"y":-280,"width":250,"height":60,"type":"text","text":"Docker env on big PC"},
+		{"id":"21c948245bf64aa4","type":"text","text":"Docker env on big PC","x":-745,"y":-280,"width":250,"height":60},
 		{"id":"fdf9161fd0bcbacd","type":"text","text":"Docker portable environment (both on big PC and Jetson)","x":-745,"y":-90,"width":250,"height":90},
-		{"id":"4697aea3d9a5d5cb","x":-520,"y":-170,"width":250,"height":60,"type":"text","text":"Docker env on Jetson"},
+		{"id":"4697aea3d9a5d5cb","type":"text","text":"Docker env on Jetson","x":-520,"y":-170,"width":250,"height":60},
 		{"id":"070badcaa58a78ff","type":"text","text":"Intro to robotics research doc","x":-370,"y":-310,"width":250,"height":60},
 		{"id":"130a2ecb105c425c","type":"text","text":"Understand the architecture of Brum","x":-70,"y":-310,"width":250,"height":60},
 		{"id":"280f99dcd1bbe458","type":"text","text":"Try out Yolo26","x":290,"y":-310,"width":250,"height":60},
-		{"id":"3fa471929c450186","x":-995,"y":-640,"width":250,"height":60,"type":"text","text":"This week"},
-		{"id":"d583c714bab11654","type":"text","text":"Next week","x":-40,"y":-640,"width":250,"height":60}
+		{"id":"3fa471929c450186","type":"text","text":"This week","x":-1280,"y":-640,"width":910,"height":60},
+		{"id":"d583c714bab11654","type":"text","text":"Next week","x":-195,"y":-640,"width":735,"height":60},
+		{"id":"1dfd63f4ac219af1","type":"text","text":"Investigate diff. functionalities of ZED SDK","x":-1760,"y":-370,"width":250,"height":60,"color":"2"},
+		{"id":"0e39a513e536399b","type":"text","text":"Write important things down","x":-1510,"y":40,"width":250,"height":60,"color":"2"},
+		{"id":"16e4e3381d5ed4ab","type":"text","text":"Go through ZED online docs","x":-1760,"y":-90,"width":250,"height":60},
+		{"id":"b7d5e076bd5e3abd","type":"text","text":"Go through ZED tutorials","x":-2040,"y":-90,"width":250,"height":60},
+		{"id":"79a72957ed2840fd","type":"text","text":"Experiment with ZED desktop apps","x":-1360,"y":-90,"width":250,"height":60,"color":"2"}
 	],
 	"edges":[
 		{"id":"f335ac7533ad34fc","fromNode":"1dfd63f4ac219af1","fromSide":"right","toNode":"e33c902076ed1176","toSide":"left"},
@@ -20,6 +24,10 @@
 		{"id":"18ce2f420f7354ca","fromNode":"e33c902076ed1176","fromSide":"right","toNode":"8d16034e5909d1a5","toSide":"left"},
 		{"id":"74ed5ba44307faba","fromNode":"fdf9161fd0bcbacd","fromSide":"top","toNode":"21c948245bf64aa4","toSide":"bottom"},
 		{"id":"78ddbd5948700308","fromNode":"21c948245bf64aa4","fromSide":"top","toNode":"8d16034e5909d1a5","toSide":"left"},
-		{"id":"1b2dc8bb24469378","fromNode":"fdf9161fd0bcbacd","fromSide":"top","toNode":"4697aea3d9a5d5cb","toSide":"left"}
+		{"id":"1b2dc8bb24469378","fromNode":"fdf9161fd0bcbacd","fromSide":"top","toNode":"4697aea3d9a5d5cb","toSide":"left"},
+		{"id":"127a34098a62d49e","fromNode":"b7d5e076bd5e3abd","fromSide":"top","toNode":"1dfd63f4ac219af1","toSide":"bottom"},
+		{"id":"dc181fb9ec415d5b","fromNode":"16e4e3381d5ed4ab","fromSide":"top","toNode":"1dfd63f4ac219af1","toSide":"bottom"},
+		{"id":"eeca8f48dc2fab5e","fromNode":"79a72957ed2840fd","fromSide":"top","toNode":"1dfd63f4ac219af1","toSide":"bottom"},
+		{"id":"35c4f44fd73aea88","fromNode":"0e39a513e536399b","fromSide":"top","toNode":"1dfd63f4ac219af1","toSide":"bottom"}
 	]
 }
