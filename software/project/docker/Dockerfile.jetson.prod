@@ -1,0 +1,17 @@
+FROM stereolabs/zed:5.2-tools-devel-l4t-r36.4
+
+WORKDIR /app
+
+# Install build tools (cmake + compiler) and any extra deps you need.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    libopencv-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY . /app
+
+RUN cmake -S . -B build && cmake --build build -j"$(nproc)"
+
+ENTRYPOINT ["/app/docker/entrypoint.sh"]
+CMD ["/app/build/3dpipe"]

@@ -1,0 +1,42 @@
+services:
+  3dpipe:
+    image: 3dpipe:x86
+    working_dir: /app
+    privileged: true
+    environment:
+      DISPLAY: ${DISPLAY}
+      QT_X11_NO_MITSHM: "1"
+    volumes:
+      - .:/app:rw
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    command: >
+      bash -lc "cmake -S . -B build &&
+      cmake --build build -j\$(nproc) &&
+      ./build/3dpipe"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: ["gpu"]
+
+  3dpipe-prod:
+    profiles: ["prod"]
+    image: 3dpipe:x86-prod
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.x86.prod
+    privileged: true
+    environment:
+      DISPLAY: ${DISPLAY}
+      QT_X11_NO_MITSHM: "1"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: ["gpu"]
