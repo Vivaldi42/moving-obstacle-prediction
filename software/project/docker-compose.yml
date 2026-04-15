@@ -23,6 +23,7 @@ services:
 
   3dpipe-jetson:
     image: 3dpipe:jetson
+    runtime: nvidia
     working_dir: /app
     privileged: true
     environment:
