@@ -20,12 +20,12 @@ xhost +local:docker
 
 Run:
 ```bash
-docker compose up
+docker compose up 3dpipe-x86
 ```
 
 In dev mode, the repo is mounted into `/app` inside the container, so your local
 source files are used directly. The Dockerfiles do not copy your project code.
-On each `docker compose up`, the container:
+On each `docker compose up 3dpipe-x86`, the container:
 - configures CMake
 - rebuilds the app
 - runs `./build/3dpipe`
@@ -51,7 +51,20 @@ docker compose --profile prod up 3dpipe-prod
 In this mode, the image copies the source code during `docker build`, compiles
 it into the image, and then runs without mounting your repo into `/app`.
 
-## Next Step Needed (Jetson)
+## Jetson Dev Mode
+
+Build the Jetson dev environment image on the Orin Nano:
+```bash
+docker build -f docker/Dockerfile.jetson -t 3dpipe:jetson .
+```
+
+Run on the Orin Nano:
+```bash
+xhost +local:docker
+docker compose up 3dpipe-jetson
+```
+
+## Jetson Note
 
 Your Jetson reported `R36 (rev 5.0)` which corresponds to **L4T 36.5.0** and
 maps to **JetPack 6.2.2**. citeturn1search3turn1search0
@@ -101,7 +114,7 @@ Steps:
   - Ubuntu packages are added
   - or system-level dependencies are chagned
 2. Develop normally in VS Code.
-3. Run the project: `docker compose up`
+3. Run the project: `docker compose up 3dpipe-x86`
 4. Docker mounts your code, compiles it, and runs it.
 
 Use production style when:
