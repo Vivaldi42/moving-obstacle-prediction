@@ -28,7 +28,7 @@ source files are used directly. The Dockerfiles do not copy your project code.
 On each `docker compose up 3dpipe-x86`, the container:
 - configures CMake
 - rebuilds the app
-- runs `./build/3dpipe`
+- runs `./build-x86/3dpipe`
 
 This is convenient while actively changing code because you do not need to
 rebuild the whole Docker image after every source edit.
@@ -63,6 +63,10 @@ Run on the Orin Nano:
 xhost +local:docker
 docker compose up 3dpipe-jetson
 ```
+
+The Jetson dev flow builds into `build-jetson/`, separate from the x86
+`build-x86/` directory. This avoids cross-platform build cache problems when
+the same repo is used on both machines.
 
 ## Jetson Note
 
@@ -101,6 +105,11 @@ means:
 
 So the container sees your live working tree from VS Code and builds from that
 mounted source tree.
+
+Because x86 and Jetson generate different binaries and library paths, keep
+separate build folders per platform:
+- `build-x86/`
+- `build-jetson/`
 
 ## Dev Vs Prod
 
