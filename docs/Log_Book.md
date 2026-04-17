@@ -1,4 +1,11 @@
-# 26.03.2026
+# 15.04.2026
+- Worked on docker for x86 and arm.
+	- Set up `3dpipe` with Docker for x86 and Jetson.
+	- Switched dev mode to use mounted source code instead of copying files into the image.
+	- Added separate Compose services and build folders for x86 and Jetson.
+	- Updated the app to stream the ZED left image and show FPS.
+	- Jetson build works; remaining issue is Jetson camera runtime access (`nvargus-daemon` / `zed_x_daemon`).
+- Had a meeting with Martin and Edwin to share the progress with them.
 
 # 25.03.2026
 - I researched Docker more.
