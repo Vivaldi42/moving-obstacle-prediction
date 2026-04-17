@@ -48,6 +48,7 @@ int main() {
     std::cout << "Streaming left ZED image. Press q or Esc to quit." << std::endl;
 
     auto last_frame_time = std::chrono::steady_clock::now();
+    auto last_fps_print_time = last_frame_time;
     double fps = 0.0;
 
     while (true) {
@@ -70,6 +71,11 @@ int main() {
             fps = 1.0 / seconds;
         }
         last_frame_time = now;
+
+        if (std::chrono::duration<double>(now - last_fps_print_time).count() >= 2.0) {
+            std::cout << fpsText(fps) << std::endl;
+            last_fps_print_time = now;
+        }
 
         cv::putText(
             frame,
