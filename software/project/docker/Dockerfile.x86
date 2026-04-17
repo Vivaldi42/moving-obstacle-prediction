@@ -9,5 +9,4 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopencv-dev \
     && rm -rf /var/lib/apt/lists/*
 
-ENTRYPOINT ["/app/docker/entrypoint.sh"]
-CMD ["/app/build/3dpipe"]
+CMD ["bash"]

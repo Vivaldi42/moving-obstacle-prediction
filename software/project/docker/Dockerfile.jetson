@@ -1,4 +1,4 @@
-FROM stereolabs/zed:5.2-tools-devel-l4t-r36.4
+FROM stereolabs/zed:5.2-devel-l4t-r36.4
 
 WORKDIR /app
 
@@ -9,5 +9,4 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopencv-dev \
     && rm -rf /var/lib/apt/lists/*
 
-ENTRYPOINT ["/app/docker/entrypoint.sh"]
-CMD ["/app/build/3dpipe"]
+CMD ["bash"]

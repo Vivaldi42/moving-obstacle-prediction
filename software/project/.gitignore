@@ -1,0 +1,13 @@
+build/
+build-x86/
+build-jetson/
+
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+*.o
+*.so
+*.a
+*.log

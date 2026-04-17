@@ -43,23 +43,3 @@ services:
             - driver: nvidia
               count: all
               capabilities: ["gpu"]
-
-  3dpipe-prod:
-    profiles: ["prod"]
-    image: 3dpipe:x86-prod
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.x86.prod
-    privileged: true
-    environment:
-      DISPLAY: ${DISPLAY}
-      QT_X11_NO_MITSHM: "1"
-    volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: ["gpu"]
