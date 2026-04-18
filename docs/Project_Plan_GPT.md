@@ -131,7 +131,11 @@ Topics to research, experiment with and evaluate:
 - Physics-based game engines for simulation
 
 **State-of-the-Art**
-- ZED SDK (highest priority)
+Highest priority:
+- ZED SDK
+- Yolo
+
+Lower priority:
 - Structured motion representations (SMORE)
 - World models for dynamic environments
 - NVIDIA Cosmos
