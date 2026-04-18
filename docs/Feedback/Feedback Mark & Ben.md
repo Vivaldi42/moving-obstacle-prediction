@@ -1,3 +1,12 @@
+# 13.04.2026
+- In the portfolio you want to tell a story and all evidences should support the story.
+- Process document/Reading guide -> summary of the project: main problem, research questions, steps  taken. Describes the process and diff outcomes.
+- What is the main problem to understand your assignment? Why didn't you focus on this -> this is my focus because XYZ
+- Check online: ray casting, indexing mask for object detection, https://graduationconference-fontysict.nl/nl/, MCP - Model Context Protocol; framework for AI models; LSTM data; https://www.sac-nederland.nl/; GEA https://www.gea.com/en/
+- Make a concrete experiment.
+- Stop researching when you have a concrete goal.
+- You narrowed down, but need to narrow down the project goal more.
+- Your project can use a segmentation mask.
 # 30.03.2026
 - Check latency requirements with Martin and Edwin -> ensure it's fast enough so it doesn't collide with people
 - Maybe Jetson Nano isn't powerful enough; use Jestson Orin

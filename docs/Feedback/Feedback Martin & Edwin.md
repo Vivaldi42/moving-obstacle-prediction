@@ -1,5 +1,27 @@
 # Feedback from Martin (product owner) and Edwin (company mentor)
 
+# 15.04.2026
+- Talk with Edwin about the pipeline and how it can be integrated to Brum -> it has 2 communication channels (ZeroMQ and Zennoh).
+- Concrete tasks and timeboxing. Changing the issues in the git board is fine.
+- What is the API of my system provided to Brum? What data does Brum need from my system? Now Brum doesn't have a way to handle complex messages. It handles variables like location, speed, steering mode.
+- Brum logic:
+	- If there is an obstacle in 5 m - stop immediately.
+	- Make a simple interface and mock it.
+
+# 08.04.2026
+- Add docker compose and use volumes - don't copy files in the Dockerfile.
+- Check what is the confidence in ZED Depth viewer. Check what different parameters mean and what can be useful.
+- Check if the camera can be rebooted remotely.
+- Not having a stable ID between frames isn't a problem.
+- Record throwing a ball and estimate where it'll be in 1-2 s. Maybe use vlocity or acceleration.
+- Use Yolo26 to make a base prototype and gradually improve.
+- Priorities:
+	- Understand what is possible to do with ZED SDK. Can you use it to estimate velocities of detected objects? Does it provide predictions?
+	- Demo motion prediction with Yolo26.
+	- Docker on Jetson.
+	- Measure the speed of moving objects.
+	- A dummy simple model to predict where an object will be in 1 s using test videos.
+- 
 # 25.03.2026
 - SDC Brum: Check Edwin's original design of the Brum and research Zenoh and ZeroMQ.
 - Stream live video on both big PC and Jetson. Use different base images for bigboi and Jetson.
