@@ -1,33 +1,27 @@
 {
 	"nodes":[
-		{"id":"8d16034e5909d1a5","type":"text","text":"Detection and tracking demo using ZED SDK\n**Deadline:10.04.2026**","x":-620,"y":-480,"width":250,"height":100},
 		{"id":"90f06e4b3f9a0a92","type":"text","text":"Define evaluation criteria for comparison between diff. methods","x":-195,"y":-480,"width":250,"height":80},
 		{"id":"273d8fce4e3f4bd6","type":"text","text":"Record videos for comparison between diff. methods","x":165,"y":-485,"width":250,"height":90},
 		{"id":"e33c902076ed1176","type":"text","text":"Human detection and tracking using ZED SDK","x":-960,"y":-460,"width":250,"height":60},
-		{"id":"21c948245bf64aa4","type":"text","text":"Docker env on big PC","x":-745,"y":-280,"width":250,"height":60},
-		{"id":"fdf9161fd0bcbacd","type":"text","text":"Docker portable environment (both on big PC and Jetson)","x":-745,"y":-90,"width":250,"height":90},
-		{"id":"4697aea3d9a5d5cb","type":"text","text":"Docker env on Jetson","x":-520,"y":-170,"width":250,"height":60},
-		{"id":"070badcaa58a78ff","type":"text","text":"Intro to robotics research doc","x":-370,"y":-310,"width":250,"height":60},
 		{"id":"130a2ecb105c425c","type":"text","text":"Understand the architecture of Brum","x":-70,"y":-310,"width":250,"height":60},
 		{"id":"280f99dcd1bbe458","type":"text","text":"Try out Yolo26","x":290,"y":-310,"width":250,"height":60},
-		{"id":"3fa471929c450186","type":"text","text":"This week","x":-1280,"y":-640,"width":910,"height":60},
-		{"id":"d583c714bab11654","type":"text","text":"Next week","x":-195,"y":-640,"width":735,"height":60},
-		{"id":"1dfd63f4ac219af1","type":"text","text":"Investigate diff. functionalities of ZED SDK","x":-1760,"y":-370,"width":250,"height":60,"color":"2"},
-		{"id":"0e39a513e536399b","type":"text","text":"Write important things down","x":-1510,"y":40,"width":250,"height":60,"color":"2"},
-		{"id":"16e4e3381d5ed4ab","type":"text","text":"Go through ZED online docs","x":-1760,"y":-90,"width":250,"height":60},
-		{"id":"b7d5e076bd5e3abd","type":"text","text":"Go through ZED tutorials","x":-2040,"y":-90,"width":250,"height":60},
-		{"id":"79a72957ed2840fd","type":"text","text":"Experiment with ZED desktop apps","x":-1360,"y":-90,"width":250,"height":60,"color":"2"}
+		{"id":"e4aa1d5dea931b40","type":"text","text":"Doc of related terms:\nVirtual Machine (VM)\nImage\nContainer\nDockerfile\nDockerHub\n","x":-1210,"y":0,"width":250,"height":188},
+		{"id":"21c948245bf64aa4","type":"text","text":"Reusable Docker env on big PC","x":-895,"y":0,"width":250,"height":60},
+		{"id":"fdf9161fd0bcbacd","type":"text","text":"Docker portable environment (both on big PC and Jetson)\nDeadline: 12 PM","x":-895,"y":188,"width":250,"height":112,"color":"1"},
+		{"id":"24b8bfe7997441c0","type":"text","text":"Demo live stream and FPS on x86","x":-895,"y":-140,"width":250,"height":60},
+		{"id":"b5fdb105d19c7dd2","type":"text","text":"Demo live stream and FPS on ARM","x":-620,"y":0,"width":250,"height":60},
+		{"id":"4697aea3d9a5d5cb","type":"text","text":"Reusable Docker env on Jetson","x":-620,"y":128,"width":250,"height":60},
+		{"id":"070badcaa58a78ff","type":"text","text":"Intro to robotics research doc","x":-140,"y":30,"width":250,"height":60},
+		{"id":"0f5b68422dd9dc48","type":"text","text":"What is the problem my project solves?","x":-1040,"y":-275,"width":250,"height":60},
+		{"id":"c1940b65251caf68","type":"text","text":"How can the system be designed?","x":-710,"y":-280,"width":250,"height":59},
+		{"id":"94d21927df891be0","type":"text","text":"Write down teachers feedback in better format","x":-699,"y":-622,"width":250,"height":60}
 	],
 	"edges":[
-		{"id":"f335ac7533ad34fc","fromNode":"1dfd63f4ac219af1","fromSide":"right","toNode":"e33c902076ed1176","toSide":"left"},
 		{"id":"c2a371f3baca424a","fromNode":"90f06e4b3f9a0a92","fromSide":"right","toNode":"273d8fce4e3f4bd6","toSide":"left"},
-		{"id":"18ce2f420f7354ca","fromNode":"e33c902076ed1176","fromSide":"right","toNode":"8d16034e5909d1a5","toSide":"left"},
 		{"id":"74ed5ba44307faba","fromNode":"fdf9161fd0bcbacd","fromSide":"top","toNode":"21c948245bf64aa4","toSide":"bottom"},
-		{"id":"78ddbd5948700308","fromNode":"21c948245bf64aa4","fromSide":"top","toNode":"8d16034e5909d1a5","toSide":"left"},
 		{"id":"1b2dc8bb24469378","fromNode":"fdf9161fd0bcbacd","fromSide":"top","toNode":"4697aea3d9a5d5cb","toSide":"left"},
-		{"id":"127a34098a62d49e","fromNode":"b7d5e076bd5e3abd","fromSide":"top","toNode":"1dfd63f4ac219af1","toSide":"bottom"},
-		{"id":"dc181fb9ec415d5b","fromNode":"16e4e3381d5ed4ab","fromSide":"top","toNode":"1dfd63f4ac219af1","toSide":"bottom"},
-		{"id":"eeca8f48dc2fab5e","fromNode":"79a72957ed2840fd","fromSide":"top","toNode":"1dfd63f4ac219af1","toSide":"bottom"},
-		{"id":"35c4f44fd73aea88","fromNode":"0e39a513e536399b","fromSide":"top","toNode":"1dfd63f4ac219af1","toSide":"bottom"}
+		{"id":"42ca74fcbbf1b17b","fromNode":"fdf9161fd0bcbacd","fromSide":"top","toNode":"e4aa1d5dea931b40","toSide":"right"},
+		{"id":"d7d2ce496a72f53c","fromNode":"21c948245bf64aa4","fromSide":"top","toNode":"24b8bfe7997441c0","toSide":"bottom"},
+		{"id":"c9d64116397ff923","fromNode":"4697aea3d9a5d5cb","fromSide":"top","toNode":"b5fdb105d19c7dd2","toSide":"bottom"}
 	]
 }
