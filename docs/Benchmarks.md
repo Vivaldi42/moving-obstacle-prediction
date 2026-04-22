@@ -9,6 +9,7 @@
 - Reporting unit: per sequence, with summary statistics across all sequences
 
 ---
+# Primary Metrics
 
 ## 1. Average Displacement Error (ADE)
 
@@ -29,8 +30,9 @@ Where:
 
 **Reported as:** mean per sequence, overall mean across all sequences
 
----
+Note: the subscript $_2$ at the end of the formula specifies the norm being used in this case the Euclidean distance (L2 norm).
 
+---
 ## 2. Final Displacement Error (FDE)
 
 **What it measures:** Euclidean distance between predicted and ground truth positions at the final predicted timestep only (t = 30, i.e. 1 second ahead).
@@ -51,21 +53,27 @@ Where:
 **Reported as:** mean per sequence, overall mean across all sequences
 
 ---
-
-## 3. ID Switches (ID_SW)
+---
+# Secondary Metrics
+## 3. ID Switches (ID\_SW)
 
 **What it measures:** Number of times a tracked object is assigned a new identity between consecutive frames, despite being the same physical object. Caused by tracking failures in the ZED SDK. Reported to characterize tracking input quality, not as a primary evaluation target.
 
 **Formula:**
 
-$$\text{ID_SW}(\text{seq}) = \sum_{\text{frames}} \mathbb{1}\left[ \text{ID}_{n,t} \neq \text{ID}_{n,t-1} \text{ for same physical object } n \right]$$
+$$\text{ID\_SW}(\text{seq}) = \#\left\{ t : \text{ID}_{n,t} \neq \text{ID}_{n,t-1} \right\}$$
+
+Where:
+
+- $\#\{\cdot\}$ denotes the count of frames where an identity change occurred
+- $t$ = frame index in the sequence 
+- $\text{ID}_{n,t}$ = identity assigned to object $n$ at frame $t$
 
 **Unit:** count (integer)
 
 **Reported as:** per sequence, plus mean and max across all sequences
 
 ---
-
 ## 4. Track Completeness (TC)
 
 **What it measures:** For a given object, the percentage of frames in which it has a valid track assigned. Characterizes gaps or dropouts in tracking input. Reported to characterize tracking input quality, not as a primary evaluation target.
@@ -74,9 +82,9 @@ $$\text{ID_SW}(\text{seq}) = \sum_{\text{frames}} \mathbb{1}\left[ \text{ID}_{n,
 
 Per object:
 
-$$\text{TC}(n) = \frac{\text{frames where object } n \text{ has valid track}}{\text{total frames object } n \text{ is visible}} \times 100$$
+$$\text{TC}(n) = \frac{\text{frames where object } n \text{ has valid track}}{\text{total frames in which object } n \text{ is visible}} \times 100$$
 
-Per sequence (aggregated over all objects):
+Per sequence (aggregated over all objects $N$):
 
 $$\text{TC}(\text{seq}) = \frac{1}{N} \sum_{n=1}^{N} \text{TC}(n)$$
 
@@ -85,14 +93,18 @@ $$\text{TC}(\text{seq}) = \frac{1}{N} \sum_{n=1}^{N} \text{TC}(n)$$
 **Reported as:** per sequence, plus mean across all sequences
 
 ---
-
 ## 5. Latency
 
 **What it measures:** Time elapsed from receiving an input frame to outputting a prediction. Determines real-time feasibility.
 
 **Formula:**
 
-$$\text{Latency}_t = t_{\text{output}} - t_{\text{input}}$$
+$$\text{Latency}_t = \tau_{\text{output,t}} - \tau_{\text{input,t}}$$
+Where:
+
+- $t$ = frame index
+- $\tau_{\text{input},t}$ = timestamp when frame $t$ was received
+- $\tau_{\text{output},t}$​ = timestamp when prediction for frame $t$ was output
 
 **Unit:** milliseconds (ms)
 
@@ -104,10 +116,10 @@ $$\text{Latency}_t = t_{\text{output}} - t_{\text{input}}$$
 
 ## Summary Table
 
-|#|Metric|Abbrev.|Stage|Unit|Reported As|
-|---|---|---|---|---|---|
-|1|Average Displacement Error|ADE|Prediction|meters|mean per seq, overall mean|
-|2|Final Displacement Error|FDE|Prediction|meters|mean per seq, overall mean|
-|3|ID Switches|ID_SW|Tracking (input quality)|count|per seq, mean + max summary|
-|4|Track Completeness|TC|Tracking (input quality)|%|per seq, mean summary|
-|5|Latency|-|System|ms|mean, p95, max|
+| #   | Metric                     | Abbrev. | Stage                    | Unit   | Reported As                 |
+| --- | -------------------------- | ------- | ------------------------ | ------ | --------------------------- |
+| 1   | Average Displacement Error | ADE     | Prediction               | meters | mean per seq, overall mean  |
+| 2   | Final Displacement Error   | FDE     | Prediction               | meters | mean per seq, overall mean  |
+| 3   | ID Switches                | ID_SW   | Tracking (input quality) | count  | per seq, mean + max summary |
+| 4   | Track Completeness         | TC      | Tracking (input quality) | %      | per seq, mean summary       |
+| 5   | Latency                    | -       | System                   | ms     | mean, p95, max              |
