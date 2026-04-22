@@ -2,11 +2,11 @@
 
 # 15.04.2026
 - Talk with Edwin about the pipeline and how it can be integrated to Brum -> it has 2 communication channels (ZeroMQ and Zennoh).
-- Concrete tasks and timeboxing. Changing the issues in the git board is fine.
 - What is the API of my system provided to Brum? What data does Brum need from my system? Now Brum doesn't have a way to handle complex messages. It handles variables like location, speed, steering mode.
 - Brum logic:
 	- If there is an obstacle in 5 m - stop immediately.
 	- Make a simple interface and mock it.
+- Concrete tasks and timeboxing. Changing the issues in the git board is fine.
 
 # 08.04.2026
 - Add docker compose and use volumes - don't copy files in the Dockerfile.
