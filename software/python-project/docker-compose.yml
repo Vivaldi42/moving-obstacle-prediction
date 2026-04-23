@@ -1,6 +1,6 @@
 services:
-  3dpipe-x86:
-    image: 3dpipe:x86
+  python-prototype-x86:
+    image: 3dpipe-python:x86
     working_dir: /app
     privileged: true
     environment:
@@ -10,9 +10,7 @@ services:
       - .:/app:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
     command: >
-      bash -lc "cmake -S . -B build-x86 &&
-      cmake --build build-x86 -j\$(nproc) &&
-      ./build-x86/3dpipe"
+      bash -lc "${PYTHON_COMMAND:-python src/rgb_live_stream.py}"
     deploy:
       resources:
         reservations:
@@ -21,8 +19,8 @@ services:
               count: all
               capabilities: ["gpu"]
 
-  3dpipe-jetson:
-    image: 3dpipe:jetson
+  python-prototype-jetson:
+    image: 3dpipe-python:jetson
     runtime: nvidia
     working_dir: /app
     privileged: true
@@ -33,9 +31,7 @@ services:
       - .:/app:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
     command: >
-      bash -lc "cmake -S . -B build-jetson &&
-      cmake --build build-jetson -j\$(nproc) &&
-      ./build-jetson/3dpipe"
+      bash -lc "${PYTHON_COMMAND:-python src/rgb_live_stream.py}"
     deploy:
       resources:
         reservations:
