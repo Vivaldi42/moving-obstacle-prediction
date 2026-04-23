@@ -1,3 +1,9 @@
+# 20.04.2026
+- Develop a simple case: track and predict 1 moving object (e.g., ball) with const velocity. Scope the MVP.
+- Don't spend too much time on V-JEPA. Maybe the tech isn't ready for my use case.
+- 1st simple case for video dataset: ball or person.
+- 2nd more complex cases.
+
 # 13.04.2026
 - In the portfolio you want to tell a story and all evidences should support the story.
 - Process document/Reading guide -> summary of the project: main problem, research questions, steps  taken. Describes the process and diff outcomes.
