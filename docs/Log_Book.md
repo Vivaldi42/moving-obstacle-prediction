@@ -1,3 +1,9 @@
+# 24.04.2026
+- Finished the Docker research document.
+
+# 23.04.2026
+- Made a prototype of software system that follows a tennis ball in Python.
+
 # 15.04.2026
 - Worked on docker for x86 and arm.
 	- Set up `3dpipe` with Docker for x86 and Jetson.
