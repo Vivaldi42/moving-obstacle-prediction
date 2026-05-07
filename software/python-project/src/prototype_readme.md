@@ -25,11 +25,14 @@ The prototype works like this:
 The current script in [prototype.py](/home/vladi/Desktop/obstacle_prediction/software/python-project/src/prototype.py:1) successfully does the following:
 
 - Opens a ZED `.svo2` file with `pyzed`.
+- Uses the ZED depth mode defined in `prototype.py`, currently `PERFORMANCE`, to reduce GPU memory usage.
 - Reads each frame's RGB image and depth map.
 - Runs `yolov8n.pt` and keeps only detections from the COCO `sports ball` class.
 - Projects the detection center into 3D using the provided ZED intrinsics.
 - Falls back to nearby valid depth values when the exact center pixel has invalid depth.
 - Tracks detections using a simple nearest-neighbor tracker.
+- Uses a single-ball tracking policy so the prototype prefers one continuous ball track instead of multiple parallel IDs.
+- Uses a more forgiving 3D distance threshold when reacquiring the same ball after short detection gaps.
 - Estimates velocity from recent 3D positions.
 - Predicts a future 3D position using a constant-velocity model.
 - Writes:
@@ -42,6 +45,7 @@ The current script in [prototype.py](/home/vladi/Desktop/obstacle_prediction/sof
 
 - `FrameExtractor`
   - Opens the SVO2 file and returns RGB plus depth for each frame.
+  - Uses the depth mode set in `prototype.py`, currently `PERFORMANCE`.
 
 - `BallDetector`
   - Runs YOLO on the RGB frame and returns bounding boxes for `sports ball`.
@@ -52,7 +56,9 @@ The current script in [prototype.py](/home/vladi/Desktop/obstacle_prediction/sof
 
 - `CentroidTracker`
   - Matches detections frame-to-frame using distance thresholds.
+  - Treats the scene as a single-ball problem and keeps one active ball track at a time.
   - Keeps short track history and allows a few missed frames.
+  - Uses a looser 3D matching threshold when reconnecting to the same ball after a miss.
 
 - `PhysicsPredictor`
   - Uses recent positions to estimate velocity.

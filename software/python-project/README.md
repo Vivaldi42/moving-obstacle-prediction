@@ -23,6 +23,9 @@ The Docker layout intentionally mirrors the C++ project:
 
 The commands below assume you run them from the repo root (`obstacle_prediction`).
 
+The x86 container needs NVIDIA GPU access because the ZED SDK uses CUDA for SVO playback and depth retrieval.
+The prototype currently uses the depth mode configured inside `src/prototype.py`, which defaults to `PERFORMANCE` to reduce GPU memory pressure during startup.
+
 Build the x86 image:
 ```bash
 docker build -f software/python-project/docker/Dockerfile.x86 -t 3dpipe-python:x86 software/python-project
@@ -32,6 +35,13 @@ Allow Docker to access your display:
 ```bash
 xhost +local:docker
 ```
+
+If you see `NO GPU COMPATIBLE` or CUDA out-of-memory errors when starting the container, check that:
+
+- the NVIDIA Container Toolkit is installed and working
+- Docker can see the GPU
+- no other GPU-heavy process is exhausting VRAM
+- you are using the compose file in this repo, which now requests `gpus: all`
 
 Run the default RGB stream prototype:
 ```bash

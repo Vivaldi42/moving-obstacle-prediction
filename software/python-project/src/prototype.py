@@ -17,8 +17,9 @@ from ultralytics import YOLO
 
 
 YOLO_CONFIDENCE_THRESHOLD = 0.5
-TRACKING_MAX_DISTANCE_PIXELS = 100.0
-TRACKING_MAX_DISTANCE_MM = 200.0
+TRACKING_MAX_DISTANCE_PIXELS = 1000.0
+TRACKING_MAX_DISTANCE_MM = 2000.0
+TRACKING_REACQUIRE_DISTANCE_MM = 3000.0
 MIN_HISTORY_FRAMES = 3
 PREDICTION_HORIZON_SEC = 0.5
 FPS = 30.0
@@ -34,6 +35,7 @@ TRACK_HISTORY_LENGTH = 10
 MAX_PREDICTION_MISSES = 5
 DEFAULT_MODEL_PATH = "yolov8n.pt"
 DEPTH_PATCH_RADIUS_PX = 4
+DEFAULT_DEPTH_MODE = "NEURAL_LIGHT"
 
 
 @dataclass
@@ -68,13 +70,13 @@ class Track:
 class FrameExtractor:
     """Extract RGB and depth from SVO2."""
 
-    def __init__(self, svo_path: str | Path) -> None:
+    def __init__(self, svo_path: str | Path, depth_mode_name: str = DEFAULT_DEPTH_MODE) -> None:
         self.svo_path = str(svo_path)
         self.camera = sl.Camera()
         self.init_params = sl.InitParameters()
         self.init_params.set_from_svo_file(self.svo_path)
         self.init_params.svo_real_time_mode = False
-        self.init_params.depth_mode = sl.DEPTH_MODE.ULTRA
+        self.init_params.depth_mode = self._resolve_depth_mode(depth_mode_name)
         self.init_params.coordinate_units = sl.UNIT.MILLIMETER
         self.init_params.camera_disable_self_calib = True
 
@@ -118,6 +120,16 @@ class FrameExtractor:
 
     def close(self) -> None:
         self.camera.close()
+
+    @staticmethod
+    def _resolve_depth_mode(depth_mode_name: str) -> sl.DEPTH_MODE:
+        normalized_name = depth_mode_name.strip().upper()
+        if hasattr(sl.DEPTH_MODE, normalized_name):
+            return getattr(sl.DEPTH_MODE, normalized_name)
+        available = [name for name in dir(sl.DEPTH_MODE) if name.isupper()]
+        raise ValueError(
+            f"Unsupported depth mode '{depth_mode_name}'. Available modes: {', '.join(sorted(available))}"
+        )
 
 
 class BallDetector:
@@ -234,83 +246,58 @@ class Projector3D:
 
 
 class CentroidTracker:
-    """Nearest neighbor tracking."""
+    """Single-ball nearest-neighbor tracking."""
 
     def __init__(
         self,
         max_distance_pixels: float = TRACKING_MAX_DISTANCE_PIXELS,
         max_distance_mm: float = TRACKING_MAX_DISTANCE_MM,
+        reacquire_distance_mm: float = TRACKING_REACQUIRE_DISTANCE_MM,
         fps: float = FPS,
         max_prediction_misses: int = MAX_PREDICTION_MISSES,
     ) -> None:
         self.max_distance_pixels = max_distance_pixels
         self.max_distance_mm = max_distance_mm
+        self.reacquire_distance_mm = reacquire_distance_mm
         self.dt = 1.0 / fps
         self.max_prediction_misses = max_prediction_misses
         self.next_track_id = 1
         self.tracks: dict[int, Track] = {}
+        self.active_track_id: int | None = None
 
     def update(self, detections_3d: list[Detection3D]) -> list[Track]:
+        if self.active_track_id is not None and self.active_track_id not in self.tracks:
+            self.active_track_id = None
+
+        active_track = self.tracks.get(self.active_track_id) if self.active_track_id is not None else None
+
         if not detections_3d:
-            return self._advance_without_detections()
+            return self._advance_without_detection(active_track)
 
-        unmatched_track_ids = set(self.tracks.keys())
-        unmatched_detections = set(range(len(detections_3d)))
-        candidate_pairs: list[tuple[float, int, int]] = []
+        if active_track is None:
+            self._create_track(self._select_seed_detection(detections_3d))
+            return list(self.tracks.values())
 
-        for track_id, track in self.tracks.items():
-            for det_index, detection in enumerate(detections_3d):
-                pixel_distance = self._pixel_distance(track.current_pixel, detection.pixel_center)
-                mm_distance = self._mm_distance(track.current_pos, detection.world_pos_mm)
-                if pixel_distance <= self.max_distance_pixels and mm_distance <= self.max_distance_mm:
-                    candidate_pairs.append((mm_distance, track_id, det_index))
+        matched_detection = self._select_matching_detection(active_track, detections_3d)
+        if matched_detection is not None:
+            self._update_track(active_track, matched_detection)
+            return list(self.tracks.values())
 
-        candidate_pairs.sort(key=lambda item: item[0])
-        for _, track_id, det_index in candidate_pairs:
-            if track_id not in unmatched_track_ids or det_index not in unmatched_detections:
-                continue
-            self._update_track(self.tracks[track_id], detections_3d[det_index])
-            unmatched_track_ids.remove(track_id)
-            unmatched_detections.remove(det_index)
-
-        for track_id in unmatched_track_ids:
-            track = self.tracks[track_id]
-            track.missed_frames += 1
-            if len(track.position_history) >= 2:
-                predicted_pos = tuple(
-                    current + velocity * self.dt
-                    for current, velocity in zip(track.current_pos, track.velocity)
-                )
-                track.append(predicted_pos, track.current_pixel)
-
-        for det_index in unmatched_detections:
-            self._create_track(detections_3d[det_index])
-
-        expired_ids = [
-            track_id
-            for track_id, track in self.tracks.items()
-            if track.missed_frames > self.max_prediction_misses
-        ]
-        for track_id in expired_ids:
-            del self.tracks[track_id]
+        self._advance_track(active_track)
+        if active_track.missed_frames > self.max_prediction_misses:
+            self._remove_track(active_track.track_id)
+            self._create_track(self._select_seed_detection(detections_3d))
 
         return list(self.tracks.values())
 
-    def _advance_without_detections(self) -> list[Track]:
-        expired_ids: list[int] = []
-        for track_id, track in self.tracks.items():
-            track.missed_frames += 1
-            if len(track.position_history) >= 2:
-                predicted_pos = tuple(
-                    current + velocity * self.dt
-                    for current, velocity in zip(track.current_pos, track.velocity)
-                )
-                track.append(predicted_pos, track.current_pixel)
-            if track.missed_frames > self.max_prediction_misses:
-                expired_ids.append(track_id)
+    def _advance_without_detection(self, active_track: Track | None) -> list[Track]:
+        if active_track is None:
+            return []
 
-        for track_id in expired_ids:
-            del self.tracks[track_id]
+        self._advance_track(active_track)
+        if active_track.missed_frames > self.max_prediction_misses:
+            self._remove_track(active_track.track_id)
+            return []
 
         return list(self.tracks.values())
 
@@ -322,6 +309,7 @@ class CentroidTracker:
         )
         track.append(detection.world_pos_mm, detection.pixel_center)
         self.tracks[self.next_track_id] = track
+        self.active_track_id = self.next_track_id
         self.next_track_id += 1
 
     def _update_track(self, track: Track, detection: Detection3D) -> None:
@@ -332,6 +320,56 @@ class CentroidTracker:
             (current - previous) / self.dt
             for current, previous in zip(track.current_pos, previous_pos)
         )
+
+    def _advance_track(self, track: Track) -> None:
+        track.missed_frames += 1
+        if len(track.position_history) >= 2:
+            predicted_pos = tuple(
+                current + velocity * self.dt
+                for current, velocity in zip(track.current_pos, track.velocity)
+            )
+            track.append(predicted_pos, track.current_pixel)
+
+    def _remove_track(self, track_id: int) -> None:
+        if track_id in self.tracks:
+            del self.tracks[track_id]
+        if self.active_track_id == track_id:
+            self.active_track_id = None
+
+    def _select_seed_detection(self, detections_3d: list[Detection3D]) -> Detection3D:
+        return max(detections_3d, key=lambda detection: detection.confidence)
+
+    def _select_matching_detection(
+        self,
+        track: Track,
+        detections_3d: list[Detection3D],
+    ) -> Detection3D | None:
+        best_match: Detection3D | None = None
+        best_score: tuple[float, float, float] | None = None
+
+        predicted_pos = track.current_pos
+        if len(track.position_history) >= 2:
+            predicted_pos = tuple(
+                current + velocity * self.dt
+                for current, velocity in zip(track.current_pos, track.velocity)
+            )
+
+        for detection in detections_3d:
+            pixel_distance = self._pixel_distance(track.current_pixel, detection.pixel_center)
+            mm_distance = self._mm_distance(predicted_pos, detection.world_pos_mm)
+            allowed_mm_distance = self.max_distance_mm
+            if track.missed_frames > 0:
+                allowed_mm_distance = self.reacquire_distance_mm
+
+            if pixel_distance > self.max_distance_pixels or mm_distance > allowed_mm_distance:
+                continue
+
+            score = (mm_distance, pixel_distance, -detection.confidence)
+            if best_score is None or score < best_score:
+                best_score = score
+                best_match = detection
+
+        return best_match
 
     @staticmethod
     def _pixel_distance(point_a: tuple[int, int], point_b: tuple[int, int]) -> float:
@@ -502,12 +540,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model-path", default=DEFAULT_MODEL_PATH, help="YOLO model path")
     parser.add_argument("--confidence", type=float, default=YOLO_CONFIDENCE_THRESHOLD, help="YOLO confidence threshold")
     parser.add_argument("--debug-dir", default="debug_frames", help="Directory for saved debug frames")
+    parser.add_argument(
+        "--depth-mode",
+        default=DEFAULT_DEPTH_MODE,
+        help="ZED depth mode to use, for example PERFORMANCE, QUALITY, or ULTRA",
+    )
     return parser.parse_args()
 
 
-def main(svo_path: str, output_csv: str, output_video: str, model_path: str = DEFAULT_MODEL_PATH, confidence: float = YOLO_CONFIDENCE_THRESHOLD, debug_dir: str = "debug_frames") -> int:
+def main(
+    svo_path: str,
+    output_csv: str,
+    output_video: str,
+    model_path: str = DEFAULT_MODEL_PATH,
+    confidence: float = YOLO_CONFIDENCE_THRESHOLD,
+    debug_dir: str = "debug_frames",
+    depth_mode: str = DEFAULT_DEPTH_MODE,
+) -> int:
     """Main pipeline orchestration."""
-    frame_extractor = FrameExtractor(svo_path)
+    frame_extractor = FrameExtractor(svo_path, depth_mode_name=depth_mode)
     detector = BallDetector(confidence_threshold=confidence, model_path=model_path)
     projector = Projector3D(CAMERA_FX, CAMERA_FY, CAMERA_CX, CAMERA_CY)
     tracker = CentroidTracker(
@@ -609,5 +660,6 @@ if __name__ == "__main__":
             model_path=arguments.model_path,
             confidence=arguments.confidence,
             debug_dir=arguments.debug_dir,
+            depth_mode=arguments.depth_mode,
         )
     )
