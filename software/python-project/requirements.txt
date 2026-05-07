@@ -2,4 +2,7 @@ numpy<2
 opencv-python
 requests
 open3d
-
+filterpy
+ultralytics
+pandas
+pyzed

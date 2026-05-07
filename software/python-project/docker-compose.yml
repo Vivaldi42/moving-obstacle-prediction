@@ -8,6 +8,7 @@ services:
       QT_X11_NO_MITSHM: "1"
     volumes:
       - .:/app:rw
+      - ${ZED_DATASET_DIR:-./datasets}:/datasets:ro
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
     command: >
       bash -lc "${PYTHON_COMMAND:-python src/rgb_live_stream.py}"
@@ -29,6 +30,7 @@ services:
       QT_X11_NO_MITSHM: "1"
     volumes:
       - .:/app:rw
+      - ${ZED_DATASET_DIR:-./datasets}:/datasets:ro
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
     command: >
       bash -lc "${PYTHON_COMMAND:-python src/rgb_live_stream.py}"
