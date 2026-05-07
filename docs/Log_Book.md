@@ -1,9 +1,22 @@
+# 07.05.2026
+- Decided to use RGB-D not point clouds.
+- Clarified the design and what the system needs to do.
+- Made a python prototype that tracks a moving tennis ball across frames and uses YOLO for object detection.
+- Decided that recording other videos is not necessary.
+
+TODO:
+- Why it needs to optimize AI models every time when I start the program?
+- Add uncertainty of predictions and different potential future trajectories?
+- Write a system design document.
+- Ensure that the documentation (readme files) aligns with the code functionality.
+- Check if the measurements align with the physical world.
+
 # 24.04.2026
 - Finished the Docker research document.
 
 # 23.04.2026
 - Made a prototype of software system that follows a tennis ball in Python.
-
+ 
 # 15.04.2026
 - Worked on docker for x86 and arm.
 	- Set up `3dpipe` with Docker for x86 and Jetson.
