@@ -219,7 +219,7 @@ The internship planning is split in five sprints with a length of three weeks on
 | Concept of final portfolio (week 15)                 | June 5th   |
 | Final portfolio submission (week 17)                 | June 17th  |
 
-![Timeplan](./Timeplan/excel_timeplan.png)
+![Timeplan](excel_timeplan.png)
 
 
 ---

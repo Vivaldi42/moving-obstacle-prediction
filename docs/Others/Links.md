@@ -66,3 +66,9 @@ https://www.youtube.com/watch?v=b1o5A05ZOps
 
 Unitree robotics company
 https://www.unitree.com/
+
+Artec Leo - The world’s first wireless and AI-driven 3D scanner
+https://www.artec3d.com/portable-3d-scanners/artec-leo
+
+SUN RGB-D: A RGB-D Scene Understanding Benchmark Suite
+https://rgbd.cs.princeton.edu/
