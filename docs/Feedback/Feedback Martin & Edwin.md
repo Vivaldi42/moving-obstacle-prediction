@@ -1,5 +1,14 @@
 # Feedback from Martin (product owner) and Edwin (company mentor)
 
+# 06.05.2026
+- Use resolution: 1080p and FPS: 30 fps.
+- Record new videos with lossless compression.
+- Ask Coen or Edwin about requirement on the Brum (FPS, resolution).
+- Define what is detection, what is the resolution for depth.
+- Maybe we're interested in the point of the object closest to the camera, not its centroid.
+- Show the velocity of the object in visualization. Perspective isn't needed.
+- Reuse detection and tracking and implement prediction by yourself.
+
 # 15.04.2026
 - Talk with Edwin about the pipeline and how it can be integrated to Brum -> it has 2 communication channels (ZeroMQ and Zennoh).
 - What is the API of my system provided to Brum? What data does Brum need from my system? Now Brum doesn't have a way to handle complex messages. It handles variables like location, speed, steering mode.

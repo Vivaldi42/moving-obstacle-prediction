@@ -88,7 +88,7 @@ All sensors produce imperfect measurements due to physical, electronic, and envi
 The black gaps on the image represent noise.
 
 ---
-# **Clutter**
+# Clutter
 
 **Overview:**  
 Clutter refers to environments where many objects or structures are densely packed, making it difficult to distinguish individual objects.

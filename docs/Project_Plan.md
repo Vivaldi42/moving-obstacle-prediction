@@ -1,7 +1,5 @@
-<!-- omit in toc -->
 # Dynamic Obstacle Detection and Prediction
 
-<!-- omit in toc -->
 # Project plan
 
 ### Author: Vladislav Stefanov
@@ -17,33 +15,7 @@
 
 
 
-
-<div style="page-break-after: always;"></div>
-
-<!-- omit in toc -->
-# Table of Contents
-1. [1. Context](#1-context)
-2. [2. Problem Description](#2-problem-description)
-3. [3. Solution](#3-solution)
-   1. [3.1 Overview](#31-overview)
-   2. [3.2 Scope](#32-scope)
-      1. [Phase 1 - Problem Understanding](#phase-1---problem-understanding)
-      2. [Phase 2 - State-of-the-Art Review and Experimental Exploration](#phase-2---state-of-the-art-review-and-experimental-exploration)
-      3. [Phase 3 - Evaluation and Comparison](#phase-3---evaluation-and-comparison)
-      4. [Out-of-Scope (Current Definition)](#out-of-scope-current-definition)
-   3. [3.3 Expected Contribution](#33-expected-contribution)
-4. [4. Pre-Conditions](#4-pre-conditions)
-5. [5. Research Questions](#5-research-questions)
-6. [6. Approach](#6-approach)
-7. [7. Learning Outcomes](#7-learning-outcomes)
-8. [8. Time Plan](#8-time-plan)
-9. [9. Stakeholders and Communication](#9-stakeholders-and-communication)
-10. [10. Risk Management](#10-risk-management)
-11. [11. References](#11-references)
-
 ---
-
-<!-- omit in toc -->
 # Version History
 | Version | Date | Ammendment |
 | --- | --- | --- |
