@@ -1,0 +1,13 @@
+{
+	"nodes":[
+		{"id":"2cb025e9cb4f3f6a","x":-540,"y":-350,"width":250,"height":340,"color":"3","type":"text","text":"**What is the problem?**\n\nWhy dynamic obstacle perception is difficult in robotics?\n\nWhat are the limitations of existing reactive systems?\n\nDefine what is detection, tracking, prediction."},
+		{"id":"f58de5c5c6258073","x":-220,"y":-210,"width":250,"height":60,"type":"text","text":"Evaluation metrics"},
+		{"id":"5fc9eb123726a6be","x":100,"y":-227,"width":250,"height":95,"type":"text","text":"**What is the solution?**\n\nBuild an MVP"},
+		{"id":"5cef8faed0057eb2","x":420,"y":-247,"width":250,"height":135,"type":"text","text":"Step up and implement more advanced cases (e.g., multi-object tracking and prediction)"}
+	],
+	"edges":[
+		{"id":"363c52871ef58932","fromNode":"2cb025e9cb4f3f6a","fromSide":"right","toNode":"f58de5c5c6258073","toSide":"left"},
+		{"id":"f39f15ff2404c51d","fromNode":"f58de5c5c6258073","fromSide":"right","toNode":"5fc9eb123726a6be","toSide":"left"},
+		{"id":"57f186733f896ed5","fromNode":"5fc9eb123726a6be","fromSide":"right","toNode":"5cef8faed0057eb2","toSide":"left"}
+	]
+}

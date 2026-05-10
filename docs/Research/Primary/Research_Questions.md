@@ -12,6 +12,8 @@ RQ3 - What capabilities must a dynamic obstacle perception pipeline provide for 
 
 RQ4 - What evaluation criteria are suitable for assessing dynamic obstacle perception systems?
 
+RQ5 - Which input data representation is the most suitable for a modular dynamic obstacle detection, tracking and motion prediction system using the ZED 2i stereo camera?
+
 ---
 ## Project Goal
 
