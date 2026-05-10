@@ -3,6 +3,7 @@
 
 # 09.05.2026
 - Wrote research docs answering "Which input data representation is the most suitable for a modular dynamic obstacle detection, tracking and motion prediction system using the ZED 2i stereo camera?" and "What are the technical challenges of depth-based perception in dynamic robotics environments?"
+- Updated the benchmarks.
 
 # 07.05.2026
 - Decided to use RGB-D not point clouds.
