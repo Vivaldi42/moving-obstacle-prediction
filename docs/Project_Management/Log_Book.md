@@ -1,3 +1,9 @@
+# 10.05.2026
+- Wrote a research doc answering "Why are reactive obstacle detection systems insufficient for mobile robotics?"
+
+# 09.05.2026
+- Wrote research docs answering "Which input data representation is the most suitable for a modular dynamic obstacle detection, tracking and motion prediction system using the ZED 2i stereo camera?" and "What are the technical challenges of depth-based perception in dynamic robotics environments?"
+
 # 07.05.2026
 - Decided to use RGB-D not point clouds.
 - Clarified the design and what the system needs to do.
