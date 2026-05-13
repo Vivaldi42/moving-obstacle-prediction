@@ -4,8 +4,8 @@
 
 - Prediction horizon: 0.2 seconds
 - Frame rate: 30 Hz
-- Resolution: HD720p
-- !!! Encoding format: TBD
+- Resolution: HD1080 (1920x1080)
+- Encoding format: H265 LOSSLESS (GPU)
 - Timesteps per prediction: $T = 6$
 - Output format: predicted 3D centroid positions $(x, y, z)$ in meters
 - Tracking scenario: single moving object
@@ -14,16 +14,14 @@
 
 Ground truth trajectories are obtained from future observed object positions within the same recorded sequence.
 
-Both pipelines are evaluated under identical conditions:
+All pipeline configurations are evaluated under identical conditions:
 - same ZED 2i camera
 - same SVO2 recordings
 - same hardware platform
 - same prediction horizon
-- same tracking and prediction logic where possible
 
-The evaluation compares:
-- RGB-D-based perception pipeline
-- XYZRGB point-cloud-based perception pipeline
+The evaluation compares different pipeline designs and algorithm choices across the detection, tracking and prediction stages. The goal is to assess how design decisions at different stages affect overall system performance, rather than to evaluate any 
+single fixed configuration.
 
 ---
 
@@ -186,13 +184,11 @@ This metric characterizes computational efficiency of the pipeline.
 - peak RAM usage
 - GPU memory usage when applicable
 
-This metric is especially relevant when comparing RGB-D and dense point-cloud representations because point clouds typically require significantly more memory.
-
 ---
 
 # Experimental Conditions
 
-The comparison between RGB-D and XYZRGB point cloud representations is performed under identical experimental conditions.
+All pipeline configurations are evaluated under identical experimental conditions.
 
 Experimental scenarios may include:
 - single moving object
@@ -201,13 +197,12 @@ Experimental scenarios may include:
 - different lighting conditions
 - different camera-object distances
 
-The purpose of the evaluation is to compare:
+The purpose of the evaluation is to compare different pipeline designs across:
 - prediction accuracy
 - tracking stability
 - computational performance
-- representation suitability for short-term prediction
 
-while minimizing unrelated implementation differences between the two pipelines.
+while minimizing unrelated implementation differences between configurations.
 
 ---
 
