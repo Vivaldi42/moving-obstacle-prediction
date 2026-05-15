@@ -11,43 +11,46 @@ print("Camera opened OK")
 model = load_model("yolov8x.pt")
 print("Model loaded OK")
 
-writer = cv2.VideoWriter(OUTPUT_PATH, cv2.VideoWriter_fourcc(*"mp4v"), 30, (1920, 1080))
+writer = cv2.VideoWriter(OUTPUT_PATH, cv2.VideoWriter.fourcc(*"mp4v"), 30, (1920, 1080))
+mat_rgb = sl.Mat()
 
-mat_rgb  = sl.Mat()
-mat_xyz  = sl.Mat()
-mat_conf = sl.Mat()
-
-ball_id       = 0
-frames_missing = 0
-MAX_GAP       = 20
+prev_cx, prev_cy = None, None
+cx, cy = None, None
+missed = 0
+MAX_EXTRAP = 5
 
 i = 0
 while True:
-    result = grab_frame(cam, mat_rgb, mat_xyz, mat_conf)
-    if result is None:
+    left_rgb = grab_frame(cam, mat_rgb)
+    if left_rgb is None:
         print("End of file")
         break
 
-    left_rgb, xyz_map, conf_map = result
-    detection = detect(model, left_rgb)
     i += 1
-
     frame_bgr = cv2.cvtColor(left_rgb, cv2.COLOR_RGB2BGR)
 
-    if detection is None:
-        frames_missing += 1
-        print(f"Frame {i}: no ball detected (missing {frames_missing})")
-    else:
-        cx, cy = detection
-        if frames_missing > MAX_GAP:
-            ball_id += 1
-        frames_missing = 0
+    detection = detect(model, left_rgb)
 
-        x, y, z, _ = xyz_map[cy, cx]
-        label = f"ID:{ball_id}  x:{x:.2f}  y:{y:.2f}  z:{z:.2f}m"
-        cv2.circle(frame_bgr, (cx, cy), 20, (255, 0, 0), 3)
-        cv2.putText(frame_bgr, label, (cx + 25, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2)
-        print(f"Frame {i}: ID={ball_id}  ({cx},{cy})  x={x:.2f} y={y:.2f} z={z:.2f}m")
+    if detection is not None:
+        prev_cx, prev_cy = cx, cy
+        cx, cy = detection
+        missed = 0
+        cv2.circle(frame_bgr, (cx, cy), 20, (0, 255, 0), 3)
+        cv2.putText(frame_bgr, f"({cx}, {cy})", (cx + 25, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+        print(f"Frame {i}: ({cx}, {cy})")
+    elif cx is not None and cy is not None and prev_cx is not None and prev_cy is not None and missed < MAX_EXTRAP:
+        vx = cx - prev_cx
+        vy = cy - prev_cy
+        prev_cx, prev_cy = cx, cy
+        cx = cx + vx
+        cy = cy + vy
+        missed += 1
+        cv2.circle(frame_bgr, (cx, cy), 20, (0, 165, 255), 3)
+        cv2.putText(frame_bgr, f"({cx}, {cy}) [extrap]", (cx + 25, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 165, 255), 2)
+        print(f"Frame {i}: ({cx}, {cy}) [extrapolated]")
+    else:
+        missed += 1
+        print(f"Frame {i}: no ball")
 
     writer.write(frame_bgr)
 
