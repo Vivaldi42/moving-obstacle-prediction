@@ -47,7 +47,7 @@ def grab_frame(
 
     return left_rgb, xyz_map
 
-
+#
 def resolve_xyz(
     xyz_map: np.ndarray,
     cx: int,
@@ -71,7 +71,7 @@ def resolve_xyz(
 
     return tuple(np.median(valid, axis=0).tolist())
 
-
+#
 def project_to_pixel(
     x: float,
     y: float,
@@ -109,7 +109,7 @@ def detect(
 
     return int((x1 + x2) / 2), int((y1 + y2) / 2)
 
-
+#
 class BallKalmanFilter:
     """Constant-velocity Kalman filter in 3D metres. State: [x, y, z, vx, vy, vz]."""
 
