@@ -1,8 +1,6 @@
-# Why Reactive Obstacle Detection Systems Are Insufficient for Mobile Robotics
+# Research Question
 
-## Research Question
-
-> Why are reactive obstacle detection systems insufficient for mobile robotics?
+# Why Reactive Obstacle Detection Systems Are Insufficient for Mobile Robotics?
 
 ---
 ## Abstract
