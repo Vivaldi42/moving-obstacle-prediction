@@ -13,7 +13,7 @@ from pipeline import (
 )
 
 
-SVO_PATH = "/datasets/Dataset_2/Clean/HD1080_one_ball_hit_window_21-35-59.svo2"
+SVO_PATH = "/datasets/Dataset_2/Clean/HD1080_one_ball_straight_line_21-32-13.svo2the"
 
 OUTPUT_PATH = "/app/output_detections.mp4"
 PREDICTION_HORIZON = 0.2
