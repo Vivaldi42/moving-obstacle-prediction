@@ -22,7 +22,7 @@ def open_svo(path: str) -> sl.Camera:
 
     return cam
 
-
+# check
 def get_intrinsics(cam: sl.Camera) -> tuple[float, float, float, float]:
     calib = cam.get_camera_information().camera_configuration.calibration_parameters.left_cam
     return calib.fx, calib.fy, calib.cx, calib.cy
