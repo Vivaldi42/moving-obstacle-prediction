@@ -76,7 +76,7 @@ def detect(
     model: YOLO,
     left_rgb: np.ndarray,
 ) -> tuple[int, int, int, int] | None:
-    results = model(left_rgb, conf=0.25, classes=[SPORTS_BALL_CLASS_ID], verbose=False)
+    results = model(left_rgb, conf=0.15, classes=[SPORTS_BALL_CLASS_ID], verbose=False)
 
     boxes = results[0].boxes
     if boxes is None or len(boxes) == 0:
@@ -125,18 +125,18 @@ class BallKalmanFilter:
 
     def predict(self) -> tuple[float, float, float]:
         state = self.kf.predict()
-        return float(state[0]), float(state[1]), float(state[2])
+        return float(state[0, 0]), float(state[1, 0]), float(state[2, 0])
 
     def correct(self, x: float, y: float, z: float) -> tuple[float, float, float]:
         measurement = np.array([[x], [y], [z]], dtype=np.float32)
         state = self.kf.correct(measurement)
-        return float(state[0]), float(state[1]), float(state[2])
+        return float(state[0, 0]), float(state[1, 0]), float(state[2, 0])
 
     def predict_ahead(self, t: float) -> tuple[float, float, float]:
-        x = float(self.kf.statePost[0])
-        y = float(self.kf.statePost[1])
-        z = float(self.kf.statePost[2])
-        vx = float(self.kf.statePost[3])
-        vy = float(self.kf.statePost[4])
-        vz = float(self.kf.statePost[5])
+        x = float(self.kf.statePost[0, 0])
+        y = float(self.kf.statePost[1, 0])
+        z = float(self.kf.statePost[2, 0])
+        vx = float(self.kf.statePost[3, 0])
+        vy = float(self.kf.statePost[4, 0])
+        vz = float(self.kf.statePost[5, 0])
         return x + vx * t, y + vy * t, z + vz * t
