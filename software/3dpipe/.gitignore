@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+debug_frames/
+*.mp4
+*.csv
+*.pt
