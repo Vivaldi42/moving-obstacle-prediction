@@ -1,0 +1,142 @@
+"""
+Measures YOLO and ZED detection accuracy from captured image/depth pairs.
+Fill in CAPTURES with filenames and manual measurements, then run.
+
+X = left/right (right is positive), Y = up/down (down is positive),
+Z = distance from camera. Measurements are in metres (m).
+
+Leave None for axes that have not been measured yet.
+"""
+
+import json
+import os
+import sys
+
+import cv2
+import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from pipeline import detect_ball_bbox, load_model, calc_ball_3d_position
+
+DATA_DIR = "/datasets/Dataset_2/Clean/Detection_Accuracy"
+
+CAPTURES = [
+    # (left_image,           depth_file,             true_x, true_y, true_z)
+    ("cap_001_left.png", "cap_001_depth.npy",         0.7,   0.28,   0.77),
+    ("cap_002_left.png", "cap_002_depth.npy",         0.6,   0.28,   0.77),
+    ("cap_003_left.png", "cap_003_depth.npy",         0.5,   0.28,   0.77),
+    ("cap_004_left.png", "cap_004_depth.npy",         0.4,   0.28,   0.77),
+    ("cap_005_left.png", "cap_005_depth.npy",         0.3,   0.28,   0.77),
+    ("cap_006_left.png", "cap_006_depth.npy",         0.2,   0.28,   0.77),
+    ("cap_007_left.png", "cap_007_depth.npy",         0.1,   0.28,   0.77),
+    ("cap_008_left.png", "cap_008_depth.npy",         0.0,   0.28,   0.77),
+    ("cap_009_left.png", "cap_009_depth.npy",        -0.1,   0.28,   0.77),
+    ("cap_010_left.png", "cap_010_depth.npy",        -0.2,   0.28,   0.77),
+    ("cap_011_left.png", "cap_011_depth.npy",        -0.3,   0.28,   0.77),
+    ("cap_012_left.png", "cap_012_depth.npy",        -0.4,   0.28,   0.77),
+    ("cap_013_left.png", "cap_013_depth.npy",        -0.5,   0.28,   0.77),
+    ("cap_014_left.png", "cap_014_depth.npy",        -0.6,   0.28,   0.77),
+    ("cap_015_left.png", "cap_015_depth.npy",        -0.7,   0.28,   0.77),
+    ("cap_016_left.png", "cap_016_depth.npy",         0.7,   0.28,   0.67),
+    ("cap_017_left.png", "cap_017_depth.npy",         0.6,   0.28,   0.67),
+    ("cap_018_left.png", "cap_018_depth.npy",         0.5,   0.28,   0.67),
+    ("cap_019_left.png", "cap_019_depth.npy",         0.4,   0.28,   0.67),
+    ("cap_020_left.png", "cap_020_depth.npy",         0.3,   0.28,   0.67),
+    ("cap_021_left.png", "cap_021_depth.npy",         0.2,   0.28,   0.67),
+    ("cap_022_left.png", "cap_022_depth.npy",         0.1,   0.28,   0.67),
+    ("cap_023_left.png", "cap_023_depth.npy",         0.0,   0.28,   0.67),
+    ("cap_024_left.png", "cap_024_depth.npy",        -0.1,   0.28,   0.67),
+    ("cap_025_left.png", "cap_025_depth.npy",        -0.2,   0.28,   0.67),
+    ("cap_026_left.png", "cap_026_depth.npy",        -0.3,   0.28,   0.67),
+    ("cap_027_left.png", "cap_027_depth.npy",        -0.4,   0.28,   0.67),
+    ("cap_028_left.png", "cap_028_depth.npy",        -0.5,   0.28,   0.67),
+    ("cap_029_left.png", "cap_029_depth.npy",        -0.6,   0.28,   0.67),
+    ("cap_030_left.png", "cap_030_depth.npy",        -0.7,   0.28,   0.67),
+    ("cap_031_left.png", "cap_031_depth.npy",         0.7,   0.28,   0.57),
+    ("cap_032_left.png", "cap_032_depth.npy",         0.6,   0.28,   0.57),
+    ("cap_033_left.png", "cap_033_depth.npy",         0.5,   0.28,   0.57),
+    ("cap_034_left.png", "cap_034_depth.npy",         0.4,   0.28,   0.57),
+    ("cap_035_left.png", "cap_035_depth.npy",         0.3,   0.28,   0.57),
+    ("cap_036_left.png", "cap_036_depth.npy",         0.2,   0.28,   0.57),
+    ("cap_037_left.png", "cap_037_depth.npy",         0.1,   0.28,   0.57),
+    ("cap_038_left.png", "cap_038_depth.npy",         0.0,   0.28,   0.57),
+    ("cap_039_left.png", "cap_039_depth.npy",        -0.1,   0.28,   0.57),
+    ("cap_040_left.png", "cap_040_depth.npy",        -0.2,   0.28,   0.57),
+    ("cap_041_left.png", "cap_041_depth.npy",        -0.3,   0.28,   0.57),
+    ("cap_042_left.png", "cap_042_depth.npy",        -0.4,   0.28,   0.57),
+    ("cap_043_left.png", "cap_043_depth.npy",        -0.5,   0.28,   0.57),
+    ("cap_044_left.png", "cap_044_depth.npy",        -0.6,   0.28,   0.57),
+    ("cap_045_left.png", "cap_045_depth.npy",        -0.7,   0.28,   0.57),
+    ("cap_046_left.png", "cap_046_depth.npy",        0.1,   0.175,   0.67),
+    ("cap_047_left.png", "cap_047_depth.npy",        0.3,   0.175,   0.67),
+
+
+]
+
+# ---------------------------------------------------------------------------
+
+def load_intrinsics() -> tuple[float, float, float, float]:
+    path = os.path.join(DATA_DIR, "intrinsics.json")
+    data = json.load(open(path))
+    return data["fx"], data["fy"], data["cx"], data["cy"]
+
+
+def depth_to_xyz(depth: np.ndarray, fx: float, fy: float, cx: float, cy: float) -> np.ndarray:
+    """Convert a (H, W) depth map to a (H, W, 3) XYZ map matching sl.MEASURE.XYZ layout."""
+    H, W = depth.shape
+    us = np.arange(W, dtype=np.float32)
+    vs = np.arange(H, dtype=np.float32)
+    uu, vv = np.meshgrid(us, vs)
+    invalid = ~np.isfinite(depth) | (depth <= 0)
+    
+    z = np.where(invalid, np.nan, depth)
+    x = np.where(invalid, np.nan, (uu - cx) * depth / fx)
+    y = np.where(invalid, np.nan, (vv - cy) * depth / fy)
+
+    return np.stack([x, y, z], axis=-1).astype(np.float32)
+
+
+# ---------------------------------------------------------------------------
+
+model = load_model("yolov8x.pt")
+fx, fy, cx, cy = load_intrinsics()
+
+has_truth = any(true_x is not None for _, _, true_x, _, _ in CAPTURES)
+
+header = f"{'#':<4} {'Image':<25} {'Det':>5}   {'X (m)':>8} {'Y (m)':>8} {'Z (m)':>8}"
+if has_truth:
+    header += f"   {'Err X':>8} {'Err Y':>8} {'Err Z':>8}   {'|Error|':>8}"
+print(header)
+print("-" * (65 + (42 if has_truth else 0)))
+
+for i, (left_file, depth_file, true_x, true_y, true_z) in enumerate(CAPTURES):
+    img_bgr = cv2.imread(os.path.join(DATA_DIR, left_file))
+    if img_bgr is None:
+        print(f"{i+1:<4} {left_file:<25} ERROR: cannot load image")
+        continue
+
+    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    depth = np.load(os.path.join(DATA_DIR, depth_file)).squeeze()
+    xyz_map = depth_to_xyz(depth, fx, fy, cx, cy)
+
+    bbox = detect_ball_bbox(model, img_rgb)
+    if bbox is None:
+        print(f"{i+1:<4} {left_file:<25} {'no':>5}")
+        continue
+
+    x1, y1, x2, y2 = bbox
+    result = calc_ball_3d_position(xyz_map, x1, y1, x2, y2)
+
+    if result is None:
+        print(f"{i+1:<4} {left_file:<25} {'bad depth':>5}")
+        continue
+
+    camera_x, camera_y, camera_z = result
+    row = f"{i+1:<4} {left_file:<25} {'yes':>5}   {camera_x:>8.3f} {camera_y:>8.3f} {camera_z:>8.3f}"
+
+    if true_x is not None and true_y is not None and true_z is not None:
+        error_x, error_y, error_z = camera_x - true_x, camera_y - true_y, camera_z - true_z
+        dist = float(np.linalg.norm([error_x, error_y, error_z]))
+        row += f"   {error_x:>+7.2f} {error_y:>+7.2f} {error_z:>+7.2f}   {dist:>7.2f}"
+
+    print(row)
