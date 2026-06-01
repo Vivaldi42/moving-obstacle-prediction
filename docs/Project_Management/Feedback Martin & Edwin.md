@@ -1,5 +1,25 @@
 # Feedback from Martin (product owner) and Edwin (company mentor)
 
+# 27.05.2026
+- Take several photos to calibrate the camera and be sure that detections are accurate. Make manual measurements to be sure that the camera sees what it should see.
+- Change the visualization to show the actual and predicted position at one frame. The goal of the visualization is to show my contributions clearly.
+- Justify the parameter values in the KF, what are the optimal parameters, what parameters are chosen and why, do those parameters change over time. The different parameters can heavily influence the results.
+ - Try adding acceleration and gravity to the KF prediction aiming to make it more accurate. Compare the results with the old KF.
+- Send Martin and Edwin a meeting request for the project defense.
+
+# 21.05.2026
+- For next Wednesday, make a repeatable validation framework to be used to compare different prediction methods - ADE, FDE, latency, throughput, memory usage on different videos. The goal is to have the entire tooling for a benchmark v.1.0 predictor, that can be later compared with other methods (e.g., a Kalman filter with velocity and acceleration). This would be one experiment iteration. After that, you can do other iterations. Automate benchmarking, error measurements and running experiments with different methods. Show: 1) current ball coordinates; 2) predicted ball coordinates; 3) actual ball coordinates.
+- Once the v.1.0 is fine, focus on acceleration or running YOLO on the right image.
+- Update the tasks in the git issue board.
+- Take a look at different kinds of Kalman filters.
+- Now the method is discrete and uses const velocity between frames.
+- E.g., you can project a predicted ball mask from the future frame to the current frame.
+# 13.05.2026
+- Document what is in the SVO2 file. Do you need to use all the data?
+- What is the reference frame point and the transform? World frame or relative frame?
+- Make a choice what prototype are you doing.
+- Add a research question about how to develop the system?
+
 # 06.05.2026
 - Use resolution: 1080p and FPS: 30 fps.
 - Record new videos with lossless compression.

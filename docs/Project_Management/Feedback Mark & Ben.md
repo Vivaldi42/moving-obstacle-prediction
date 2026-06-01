@@ -1,3 +1,51 @@
+# 01.06.2026
+- The detection error (5-6 cm) is not too bad.
+- Check if there are other Docker containers running on Brum.
+- Check if there is available base image for Jetson Jetpack.
+- Check why it is not a good idea to add YOLO detection to the right image.
+- Visualization of the actual and predicted trajectories can be separate graphs, not overlayed on the video.
+- Maybe model predictive (control).
+- A bouncing ball is not linear.
+- Maybe try with acceleration (0, 0, 9,81) for gravity. Maybe KF will pick it up and learn acceleration.
+- KF is optimal when noise is a normal distribution and there is no bias.
+
+For the coming submission:
+- Plan for integration (I/O) with Brum or other mobile robots - define API.
+- Submit a baseline system.
+- Camera detection accuracy vs manual detections -> analysis (histogram, maybe scatter plot).
+- Add reading guide/project report with the main results and visualizations. Reference other evidences in it.
+
+# 26.05.2026
+Graduation Table Meeting 3
+- The demo of the prototype was successful. Good experimental results. There was a huge step compared to the last graduation table when there was no demo.
+- Think about handover documentation and git repo.
+- You can try to record a video with a ball at the end of a pendulum to investigate gravity handling.
+- The portfolio submission on June 5th is a rehearsal for the final submission. Most of the evidences should be there.
+- Do not change the portfolio after the final submission. Some minor updates on the code and the demo for the presentation are fine.
+
+# 20.05.2026
+- Use standard measurement units (m, s) in the code and document them.
+- Try out to run YOLO also on the right image, then take the weighted average of the two detections or the detection with higher confidence score. Make using YOLO twice will be beneficial.
+- How heavy is it to run YOLO? Does it add too much compute power to add a YOLO function call for the second image?
+- Document and justify the design choices: What components do you have? Why do you use them? What are the tradeoffs?
+- Output the measurements and predictions in a CSV file.
+- What is the internal state of the Kalman filter? Is it just position and velocity or there are other parameters?
+- Investigate and document the operation of the Kalman filter (and the prototype in general) - how do the identity and measurement metrics work, what is a const velocity model; give names to variables.
+- Try to add acceleration to the Kalman filter.
+- Do analysis on the measurement accuracy and predictions.
+- Make measurements by hand and compare them with the YOLO detection. Pick several points and manually analyze the frame when the ball is on that position. The goal is to have ground truth accuracy for the detection step. E.g., YOLO says that the ball x = 1 m, I measure that x = 1.03 by hand (independent measurement of detection). This means that the YOLO measurement is accurate with +/-5% buffer.
+- Think about project handover.
+- If in the next semester, you want to work on JEPA, the current system can be used as a benchmark.
+
+# 11.05.2026
+- Make videos with a grid/unit system.
+- Discuss what "a modular system" means in this case with the product owner.
+- Converting between RGB-D and point cloud shouldn't be a big problem. Algorithm design shouldn't depend too much on the input data representation.
+- Detect objects (x, y, z), maybe also mass, velocity, acceleration, jurk -> Kalman filter -> prediction (+ uncertainty)
+- What are the possible solutions? - research question
+- Take a look at Engineering design approach.
+- Make an MVP with Kalman filter.
+
 # 20.04.2026
 - Develop a simple case: track and predict 1 moving object (e.g., ball) with const velocity. Scope the MVP.
 - Don't spend too much time on V-JEPA. Maybe the tech isn't ready for my use case.
