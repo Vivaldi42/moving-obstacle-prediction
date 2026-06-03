@@ -151,7 +151,8 @@ def plot_results(records: list[dict]) -> None:
         return
 
     z_vals = sorted(set(r["true_z"] for r in ok))
-    color_map = dict(zip(z_vals, ["#1f77b4", "#ff7f0e", "#2ca02c"]))
+    colors = {z: c for z, c in zip(z_vals, ["#1f77b4", "#ff7f0e", "#2ca02c"])}
+    # Z=0.57m → blue, Z=0.67m → orange, Z=0.77m → green
 
     fig, axes = plt.subplots(2, 2, figsize=(13, 8))
     fig.suptitle("Ball Detection Accuracy", fontsize=14, fontweight="bold")
@@ -163,22 +164,20 @@ def plot_results(records: list[dict]) -> None:
         ("dist",  "|Error| (cm)", axes[1, 1]),
     ]:
         for z in z_vals:
-            group = [r for r in ok if r["true_z"] == z]
-            y_heights = sorted(set(r["true_y"] for r in group), reverse=True)
-            for y_h in y_heights:
-                sub = sorted([r for r in group if r["true_y"] == y_h], key=lambda r: r["true_x"])
-                is_floor = y_h == max(y_heights)
-                ax.plot(
-                    [r["true_x"] for r in sub],
-                    [r[key] * 100 for r in sub],
-                    marker="o" if is_floor else "s",
-                    linestyle="-" if is_floor else "--",
-                    color=color_map[z],
-                    label=f"Z={z:.2f}m" + ("" if is_floor else f", Y={y_h:.3f}m"),
-                    markersize=5, linewidth=1.5,
-                )
+            floor_grp = sorted([r for r in ok if r["true_z"] == z and r["true_y"] >= 0.25], key=lambda r: r["idx"])
+            elev_grp  = sorted([r for r in ok if r["true_z"] == z and r["true_y"] <  0.25], key=lambda r: r["idx"])
+            if floor_grp:
+                xs = [r["idx"] for r in floor_grp]
+                ys = [r[key] * 100 for r in floor_grp]
+                ax.plot(xs, ys, color=colors[z], linewidth=1.0, zorder=2)
+                ax.scatter(xs, ys, color=colors[z], marker="o", s=25, label=f"Z={z:.2f} m", zorder=3)
+            if elev_grp:
+                xs = [r["idx"] for r in elev_grp]
+                ys = [r[key] * 100 for r in elev_grp]
+                ax.plot(xs, ys, color=colors[z], linewidth=1.0, linestyle="--", zorder=2)
+                ax.scatter(xs, ys, color=colors[z], marker="^", s=30, zorder=3)
         ax.axhline(0, color="gray", linestyle="--", linewidth=0.8)
-        ax.set_xlabel("True X (m)")
+        ax.set_xlabel("Frame #")
         ax.set_ylabel(ylabel)
         ax.legend(fontsize=8)
         ax.grid(True, alpha=0.3)
