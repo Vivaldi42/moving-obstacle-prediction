@@ -3,7 +3,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import pyzed.sl as sl
-from pipeline import open_svo, grab_frame, load_model, detect, object_3d_position, BallKalmanFilter
+from pipeline import open_svo, grab_frame, load_model, detect_ball_bbox, calc_ball_3d_position, BallKalmanFilter
 
 SVO_PATH = "/datasets/Dataset_2/Clean/HD1080_one_ball_straight_line_21-32-13.svo2"
 OUTPUT_DIR = "/app/output"
@@ -33,13 +33,13 @@ def run_pipeline(svo_path: str, model) -> tuple[dict, dict]:
         if kf.initialized:
             kf.predict()
 
-        detection = detect(model, left_rgb)
+        detection = detect_ball_bbox(model, left_rgb)
         if detection is not None:
             x1, y1, x2, y2 = detection
-            xyz = object_3d_position(xyz_map, x1, y1, x2, y2)
+            xyz = calc_ball_3d_position(xyz_map, x1, y1, x2, y2)
             if xyz is not None:
                 if not kf.initialized:
-                    kf.init(*xyz)
+                    kf.reset(*xyz)
                     kf.predict()
                 kf.correct(*xyz)
                 gt[frame_idx] = xyz

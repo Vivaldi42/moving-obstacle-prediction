@@ -5,7 +5,7 @@ import pyzed.sl as sl
 from collections import deque
 from pipeline import (
     open_svo, get_intrinsics, grab_frame,
-    load_model, detect, object_3d_position,
+    load_model, detect_ball_bbox, calc_ball_3d_position,
     project_to_pixel, BallKalmanFilter,
 )
 
@@ -42,7 +42,6 @@ missed = 0
 corrections = 0
 frame_idx = 0
 
-# --- main loop ---
 
 while True:
     result = grab_frame(cam, mat_rgb, mat_xyz)
@@ -55,16 +54,16 @@ while True:
     if kf.initialized:
         kf.predict()
 
-    detection = detect(model, left_rgb)
+    detection = detect_ball_bbox(model, left_rgb)
     current_pixel = None
 
     if detection is not None:
         x1, y1, x2, y2 = detection
-        xyz = object_3d_position(xyz_map, x1, y1, x2, y2)
+        xyz = calc_ball_3d_position(xyz_map, x1, y1, x2, y2)
         if xyz is not None:
             x, y, z = xyz
             if not kf.initialized:
-                kf.init(x, y, z)
+                kf.reset(x, y, z)
                 kf.predict()
             x, y, z = kf.correct(x, y, z)
             current_pixel = project_to_pixel(x, y, z, fx, fy, cx_cam, cy_cam)
