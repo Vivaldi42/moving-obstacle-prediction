@@ -11,7 +11,7 @@ services:
       NVIDIA_DRIVER_CAPABILITIES: all
     volumes:
       - .:/app:rw
-      - /home/vladi/Documents/ZED:/datasets:ro
+      - /home/vladi/Documents/ZED:/datasets:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - zed-resources-x86:/usr/local/zed/resources
     command: >

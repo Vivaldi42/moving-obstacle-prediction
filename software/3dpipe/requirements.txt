@@ -2,4 +2,5 @@ numpy<2
 opencv-python
 ultralytics
 pyzed
+matplotlib
 open3d; platform_machine == "x86_64"
