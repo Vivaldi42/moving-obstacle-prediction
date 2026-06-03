@@ -50,17 +50,52 @@ def grab_frame(
     return left_rgb, xyz_map
 
 
-def object_3d_position(
+def calc_ball_3d_position(
     xyz_map: np.ndarray,
     x1: int, y1: int, x2: int, y2: int,
     min_valid_points: int = 5,
+    front_tolerance_m: float = 0.005,
 ) -> tuple[float, float, float] | None:
-    patch = xyz_map[y1:y2, x1:x2, :3].reshape(-1, 3)
-    valid = patch[np.isfinite(patch).all(axis=1)]
-    if len(valid) < min_valid_points:
+    # xyz_map: (H, W, 3) dense point cloud from sl.MEASURE.XYZ - each pixel (u,v)
+    #   holds a pre-computed (X, Y, Z) in metres in camera frame.
+    # x1,y1,x2,y2: YOLO bounding box in pixels.
+    # Returns (X, Y, Z) of the object's front-face centroid:
+    #   1. Extract all valid depth pixels inside the bbox.
+    #   2. Keep only those within front_tolerance_m of the minimum depth (the front face).
+    #   3. Use their pixel centroid as (u, v) and median Z as depth.
+    #   This corrects for floor/surface occlusion of the object's bottom, which shifts
+    #   the naive bbox-center upward and gives a wrong Y reading.
+    #   Returns None if fewer than min_valid_points finite points exist in the bbox.
+    h, w = xyz_map.shape[:2]
+    bbox_patch = xyz_map[
+        max(0, y1):min(h, y2 + 1),
+        max(0, x1):min(w, x2 + 1),
+        :3,
+    ]
+
+    ys, xs = np.meshgrid(
+        np.arange(max(0, y1), min(h, y2 + 1)),
+        np.arange(max(0, x1), min(w, x2 + 1)),
+        indexing="ij",
+    )
+
+    z_patch = bbox_patch[:, :, 2]
+    valid_mask = np.isfinite(z_patch) & (z_patch > 0)
+    if valid_mask.sum() < min_valid_points:
         return None
-    
-    return tuple(np.median(valid, axis=0).tolist())
+
+    min_z = z_patch[valid_mask].min()
+    front_mask = valid_mask & (z_patch <= min_z + front_tolerance_m)
+
+    u = float(xs[front_mask].mean())
+    v = float(ys[front_mask].mean())
+    z = float(np.median(z_patch[front_mask]))
+
+    xyz_at_centroid = xyz_map[int(round(v)), int(round(u))]
+    if not np.isfinite(xyz_at_centroid).all():
+        return None
+
+    return float(xyz_at_centroid[0]), float(xyz_at_centroid[1]), z
 
 
 def project_to_pixel(
@@ -170,3 +205,15 @@ class BallKalmanFilter:
         vy = float(self.kf.statePost[4, 0])
         vz = float(self.kf.statePost[5, 0])
         return x + vx * t, y + vy * t, z + vz * t
+
+# Cons
+# no gravity or acceleration taken into account
+# Constant-velocity Kalman filter. Bounces, spins or curved trajectories will cause lag.
+
+# Problem with ground truth
+# gt is built from the same YOLO + ZED pipeline that drives the predictions - not from an independent source.
+# YOLO bbox bias affects both the prediction inputs and the future "ground truth" frame in the same direction, so systematic offsets cancel out in the FDE calculation.
+# ZED depth noise has consistent spatial patterns - the filter absorbs them, and the "ground truth" carries them too, so they partially cancel again.
+# The KF was corrected every frame with raw measurements, so its predictions are essentially a smoothed version of those measurements projected forward. Comparing that to a future raw measurement from the same source is an easy test.
+# A real error of e.g. 5 cm could report as ~0 if both the prediction and "ground truth" share the same 5 cm bias.
+# Fix: manually annotate ball positions on a sample of frames, or evaluate on a separate recording that was never used to tune the filter's noise covariances.
