@@ -76,146 +76,107 @@ CAPTURES = [
 
 # ---------------------------------------------------------------------------
 
-def load_intrinsics() -> tuple[float, float, float, float]:
-    path = os.path.join(DATA_DIR, "intrinsics.json")
-    data = json.load(open(path))
-    return data["fx"], data["fy"], data["cx"], data["cy"]
-
-
 def depth_to_xyz(depth: np.ndarray, fx: float, fy: float, cx: float, cy: float) -> np.ndarray:
     """Convert a (H, W) depth map to a (H, W, 3) XYZ map matching sl.MEASURE.XYZ layout."""
     H, W = depth.shape
-    us = np.arange(W, dtype=np.float32)
-    vs = np.arange(H, dtype=np.float32)
-    uu, vv = np.meshgrid(us, vs)
+    uu, vv = np.meshgrid(np.arange(W, dtype=np.float32), np.arange(H, dtype=np.float32))
     invalid = ~np.isfinite(depth) | (depth <= 0)
-
     z = np.where(invalid, np.nan, depth)
     x = np.where(invalid, np.nan, (uu - cx) * depth / fx)
     y = np.where(invalid, np.nan, (vv - cy) * depth / fy)
-
     return np.stack([x, y, z], axis=-1).astype(np.float32)
 
 
-# ---------------------------------------------------------------------------
-
-model = load_model("yolov8x.pt")
-fx, fy, cx, cy = load_intrinsics()
-
-has_truth = any(true_x is not None for _, _, true_x, _, _ in CAPTURES)
-
-header = f"{'#':<4} {'Image':<25} {'Det':>5}   {'X (m)':>8} {'Y (m)':>8} {'Z (m)':>8}"
-if has_truth:
-    header += f"   {'Err X':>8} {'Err Y':>8} {'Err Z':>8}   {'|Error|':>8}"
-print(header)
-print("-" * (65 + (42 if has_truth else 0)))
-
-records = []
-
-for i, (left_file, depth_file, true_x, true_y, true_z) in enumerate(CAPTURES):
-    rec = {"idx": i + 1, "name": left_file, "true_x": true_x, "true_y": true_y, "true_z": true_z}
+def process_capture(
+    i: int,
+    left_file: str, depth_file: str,
+    true_x: float | None, true_y: float | None, true_z: float | None,
+    model, fx: float, fy: float, cx: float, cy: float,
+) -> dict:
+    base = {"idx": i + 1, "name": left_file, "true_x": true_x, "true_y": true_y, "true_z": true_z}
+    prefix = f"{i+1:<4} {left_file:<25}"
 
     img_bgr = cv2.imread(os.path.join(DATA_DIR, left_file))
     if img_bgr is None:
-        print(f"{i+1:<4} {left_file:<25} ERROR: cannot load image")
-        rec["status"] = "error"
-        records.append(rec)
-        continue
+        print(f"{prefix} ERROR: cannot load image")
+        return {**base, "status": "error"}
 
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-    depth = np.load(os.path.join(DATA_DIR, depth_file)).squeeze()
-    xyz_map = depth_to_xyz(depth, fx, fy, cx, cy)
+    xyz_map = depth_to_xyz(np.load(os.path.join(DATA_DIR, depth_file)).squeeze(), fx, fy, cx, cy)
 
     bbox = detect_ball_bbox(model, img_rgb)
     if bbox is None:
-        print(f"{i+1:<4} {left_file:<25} {'no':>5}")
-        rec["status"] = "missed"
-        records.append(rec)
-        continue
+        print(f"{prefix} {'no':>5}")
+        return {**base, "status": "missed"}
 
-    x1, y1, x2, y2 = bbox
-    result = calc_ball_3d_position(xyz_map, x1, y1, x2, y2)
-
+    result = calc_ball_3d_position(xyz_map, *bbox)
     if result is None:
-        print(f"{i+1:<4} {left_file:<25} {'bad depth':>5}")
-        rec["status"] = "bad_depth"
-        records.append(rec)
-        continue
+        print(f"{prefix} {'bad depth':>5}")
+        return {**base, "status": "bad_depth"}
 
     camera_x, camera_y, camera_z = result
-    rec["cam_x"] = camera_x
-    rec["cam_y"] = camera_y
-    rec["cam_z"] = camera_z
-
-    row = f"{i+1:<4} {left_file:<25} {'yes':>5}   {camera_x:>8.2f} {camera_y:>8.2f} {camera_z:>8.2f}"
+    row = f"{prefix} {'yes':>5}   {camera_x:>8.2f} {camera_y:>8.2f} {camera_z:>8.2f}"
 
     if true_x is not None and true_y is not None and true_z is not None:
-        err_x = camera_x - true_x
-        err_y = camera_y - true_y
-        err_z = camera_z - true_z
+        err_x, err_y, err_z = camera_x - true_x, camera_y - true_y, camera_z - true_z
         dist = float(np.linalg.norm([err_x, err_y, err_z]))
         row += f"   {err_x:>+8.2f} {err_y:>+8.2f} {err_z:>+8.2f}   {dist:>7.2f}"
-        rec.update({"err_x": err_x, "err_y": err_y, "err_z": err_z, "dist": dist, "status": "ok"})
-    else:
-        rec["status"] = "ok_no_truth"
+        print(row)
+        return {**base, "cam_x": camera_x, "cam_y": camera_y, "cam_z": camera_z,
+                "err_x": err_x, "err_y": err_y, "err_z": err_z, "dist": dist, "status": "ok"}
 
-    records.append(rec)
     print(row)
+    return {**base, "cam_x": camera_x, "cam_y": camera_y, "cam_z": camera_z, "status": "ok_no_truth"}
 
-# ---------------------------------------------------------------------------
-# Summary statistics
 
-ok = [r for r in records if r.get("status") == "ok"]
-if ok:
+def print_summary(records: list[dict]) -> None:
+    ok = [r for r in records if r.get("status") == "ok"]
+    if not ok:
+        return
     errs_x = np.array([r["err_x"] for r in ok])
     errs_y = np.array([r["err_y"] for r in ok])
     errs_z = np.array([r["err_z"] for r in ok])
-    dists   = np.array([r["dist"]  for r in ok])
-
-    n_total  = len(records)
+    dists  = np.array([r["dist"]  for r in ok])
     n_missed = sum(1 for r in records if r.get("status") == "missed")
-    n_ok     = len(ok)
-
-    print()
-    print(f"Detection rate : {n_ok}/{n_total}  ({n_missed} out of frame)")
+    print(f"\nDetection rate : {len(ok)}/{len(records)}  ({n_missed} out of frame)")
     print(f"Mean |Error|   : {dists.mean()*100:.1f} cm  (std {dists.std()*100:.1f} cm)")
     print(f"Mean Err X     : {errs_x.mean()*100:+.1f} cm  (std {errs_x.std()*100:.1f} cm)")
     print(f"Mean Err Y     : {errs_y.mean()*100:+.1f} cm  (std {errs_y.std()*100:.1f} cm)")
     print(f"Mean Err Z     : {errs_z.mean()*100:+.1f} cm  (std {errs_z.std()*100:.1f} cm)")
 
-# ---------------------------------------------------------------------------
-# Visualization
 
-if ok:
+def plot_results(records: list[dict]) -> None:
+    ok = [r for r in records if r.get("status") == "ok"]
+    if not ok:
+        return
+
     z_vals = sorted(set(r["true_z"] for r in ok))
-    palette = ["#1f77b4", "#ff7f0e", "#2ca02c"]
-    color_map = dict(zip(z_vals, palette))
+    color_map = dict(zip(z_vals, ["#1f77b4", "#ff7f0e", "#2ca02c"]))
 
     fig, axes = plt.subplots(2, 2, figsize=(13, 8))
     fig.suptitle("Ball Detection Accuracy", fontsize=14, fontweight="bold")
 
-    panels = [
+    for key, ylabel, ax in [
         ("err_x", "Err X (cm)", axes[0, 0]),
         ("err_y", "Err Y (cm)", axes[0, 1]),
         ("err_z", "Err Z (cm)", axes[1, 0]),
         ("dist",  "|Error| (cm)", axes[1, 1]),
-    ]
-
-    for key, ylabel, ax in panels:
+    ]:
         for z in z_vals:
             group = [r for r in ok if r["true_z"] == z]
             y_heights = sorted(set(r["true_y"] for r in group), reverse=True)
             for y_h in y_heights:
                 sub = sorted([r for r in group if r["true_y"] == y_h], key=lambda r: r["true_x"])
-                xs = [r["true_x"] for r in sub]
-                ys = [r[key] * 100 for r in sub]
                 is_floor = y_h == max(y_heights)
-                marker    = "o" if is_floor else "s"
-                linestyle = "-" if is_floor else "--"
-                label = f"Z={z:.2f}m" + ("" if is_floor else f", Y={y_h:.3f}m")
-                ax.plot(xs, ys, marker=marker, linestyle=linestyle,
-                        color=color_map[z], label=label, markersize=5, linewidth=1.5)
-
+                ax.plot(
+                    [r["true_x"] for r in sub],
+                    [r[key] * 100 for r in sub],
+                    marker="o" if is_floor else "s",
+                    linestyle="-" if is_floor else "--",
+                    color=color_map[z],
+                    label=f"Z={z:.2f}m" + ("" if is_floor else f", Y={y_h:.3f}m"),
+                    markersize=5, linewidth=1.5,
+                )
         ax.axhline(0, color="gray", linestyle="--", linewidth=0.8)
         ax.set_xlabel("True X (m)")
         ax.set_ylabel(ylabel)
@@ -228,3 +189,28 @@ if ok:
     out_path = os.path.join(output_dir, "accuracy_plot.png")
     plt.savefig(out_path, dpi=150, bbox_inches="tight")
     print(f"\nPlot saved to {out_path}")
+
+
+def main() -> None:
+    model = load_model("yolov8x.pt")
+    intr = json.load(open(os.path.join(DATA_DIR, "intrinsics.json")))
+    fx, fy, cx, cy = intr["fx"], intr["fy"], intr["cx"], intr["cy"]
+
+    has_truth = any(true_x is not None for _, _, true_x, _, _ in CAPTURES)
+    header = f"{'#':<4} {'Image':<25} {'Det':>5}   {'X (m)':>8} {'Y (m)':>8} {'Z (m)':>8}"
+    if has_truth:
+        header += f"   {'Err X':>8} {'Err Y':>8} {'Err Z':>8}   {'|Error|':>8}"
+    print(header)
+    print("-" * (65 + (42 if has_truth else 0)))
+
+    records = [
+        process_capture(i, *cap, model, fx, fy, cx, cy)
+        for i, cap in enumerate(CAPTURES)
+    ]
+
+    print_summary(records)
+    plot_results(records)
+
+
+if __name__ == "__main__":
+    main()
