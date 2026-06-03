@@ -70,8 +70,6 @@ CAPTURES = [
     ("cap_043_left.png", "cap_043_depth.npy",        -0.5,   0.28,   0.57),
     ("cap_044_left.png", "cap_044_depth.npy",        -0.6,   0.28,   0.57),
     ("cap_045_left.png", "cap_045_depth.npy",        -0.7,   0.28,   0.57),
-    ("cap_046_left.png", "cap_046_depth.npy",         0.1,  0.175,   0.67),
-    ("cap_047_left.png", "cap_047_depth.npy",         0.3,  0.175,   0.67),
 ]
 
 # ---------------------------------------------------------------------------
@@ -145,49 +143,69 @@ def print_summary(records: list[dict]) -> None:
     print(f"Mean Err Z     : {errs_z.mean()*100:+.1f} cm  (std {errs_z.std()*100:.1f} cm)")
 
 
-def plot_results(records: list[dict]) -> None:
+
+def plot_error_vs_position(
+    records: list[dict],
+    err_key: str,
+    axis_label: str,
+    fig_title: str,
+    out_filename: str,
+    y_lim: tuple[float, float] | None = None,
+) -> None:
     ok = [r for r in records if r.get("status") == "ok"]
     if not ok:
         return
 
     z_vals = sorted(set(r["true_z"] for r in ok))
     colors = {z: c for z, c in zip(z_vals, ["#1f77b4", "#ff7f0e", "#2ca02c"])}
-    # Z=0.57m → blue, Z=0.67m → orange, Z=0.77m → green
 
-    fig, axes = plt.subplots(2, 2, figsize=(13, 8))
-    fig.suptitle("Ball Detection Accuracy", fontsize=14, fontweight="bold")
+    RULER_UNCERTAINTY = 0.01  # m
 
-    for key, ylabel, ax in [
-        ("err_x", "Err X (cm)", axes[0, 0]),
-        ("err_y", "Err Y (cm)", axes[0, 1]),
-        ("err_z", "Err Z (cm)", axes[1, 0]),
-        ("dist",  "|Error| (cm)", axes[1, 1]),
-    ]:
-        for z in z_vals:
-            floor_grp = sorted([r for r in ok if r["true_z"] == z and r["true_y"] >= 0.25], key=lambda r: r["idx"])
-            elev_grp  = sorted([r for r in ok if r["true_z"] == z and r["true_y"] <  0.25], key=lambda r: r["idx"])
-            if floor_grp:
-                xs = [r["idx"] for r in floor_grp]
-                ys = [r[key] * 100 for r in floor_grp]
-                ax.plot(xs, ys, color=colors[z], linewidth=1.0, zorder=2)
-                ax.scatter(xs, ys, color=colors[z], marker="o", s=25, label=f"Z={z:.2f} m", zorder=3)
-            if elev_grp:
-                xs = [r["idx"] for r in elev_grp]
-                ys = [r[key] * 100 for r in elev_grp]
-                ax.plot(xs, ys, color=colors[z], linewidth=1.0, linestyle="--", zorder=2)
-                ax.scatter(xs, ys, color=colors[z], marker="^", s=30, zorder=3)
-        ax.axhline(0, color="gray", linestyle="--", linewidth=0.8)
-        ax.set_xlabel("Frame #")
-        ax.set_ylabel(ylabel)
-        ax.legend(fontsize=8)
+    fig, axes = plt.subplots(1, 3, figsize=(20, 6), sharey=True)
+    fig.suptitle(fig_title, fontsize=13, fontweight="bold")
+
+    if y_lim is not None:
+        y_min, y_max = y_lim
+    else:
+        all_errs = [r[err_key] for r in ok]
+        margin = 0.005
+        y_min = min(all_errs) - margin
+        y_max = max(all_errs) + margin
+
+    for ax, z in zip(axes, z_vals):
+        grp = sorted([r for r in ok if r["true_z"] == z], key=lambda r: r["true_x"])
+        xs = [r["true_x"] for r in grp]
+        ys = [r[err_key] for r in grp]
+
+        mean_y = np.mean(ys)
+        ax.axhspan(-RULER_UNCERTAINTY, RULER_UNCERTAINTY, color="gray", alpha=0.12, zorder=1,
+                   label=f"±{RULER_UNCERTAINTY:.2f} m ruler uncertainty")
+        ax.scatter(xs, ys, color=colors[z], marker="o", s=45, zorder=3)
+        ax.axhline(mean_y, color=colors[z], linestyle="--", linewidth=1.2, zorder=2)
+        ax.axhline(0, color="gray", linestyle="-", linewidth=0.8)
+        ax.text(1.0, -0.16, f"mean = {mean_y:.2f} m", color=colors[z], fontsize=9,
+                ha="right", va="top", transform=ax.transAxes, clip_on=False)
+        ax.set_xlabel("True X position (m)")
+        ax.set_xticks(np.arange(-0.7, 0.8, 0.1))
+        ax.set_yticks(np.arange(round(y_min, 2), round(y_max + 0.01, 2), 0.01))
+        ax.set_ylim(y_min, y_max)
+        ax.tick_params(axis="x", labelrotation=45)
+        ax.tick_params(axis="y", labelleft=True)
         ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=8, loc="upper left", bbox_to_anchor=(0.0, -0.16),
+                  borderaxespad=0)
+        ax.set_title(f"Y = 0.28 m,  Z = {z:.2f} m", fontsize=12, pad=8)
 
-    plt.tight_layout()
+    for ax in axes:
+        ax.set_ylabel(axis_label)
+
+    plt.tight_layout(rect=[0, 0.10, 1, 1])
     output_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "output")
     os.makedirs(output_dir, exist_ok=True)
-    out_path = os.path.join(output_dir, "accuracy_plot.png")
+    out_path = os.path.join(output_dir, out_filename)
     plt.savefig(out_path, dpi=150, bbox_inches="tight")
-    print(f"\nPlot saved to {out_path}")
+    plt.close()
+    print(f"Plot saved to {out_path}")
 
 
 def main() -> None:
@@ -208,7 +226,16 @@ def main() -> None:
     ]
 
     print_summary(records)
-    plot_results(records)
+
+    ok = [r for r in records if r.get("status") == "ok"]
+    margin = 0.005
+    all_vals = [r[k] for r in ok for k in ("err_x", "err_y", "err_z", "dist")]
+    shared_y_lim = (min(all_vals) - margin, max(all_vals) + margin)
+
+    plot_error_vs_position(records, "err_x", "X error (m)", "X Error vs True X Position", "x_error_vs_position.png", shared_y_lim)
+    plot_error_vs_position(records, "err_y", "Y error (m)", "Y Error vs True X Position", "y_error_vs_position.png", shared_y_lim)
+    plot_error_vs_position(records, "err_z", "Z error (m)", "Z Error vs True X Position", "z_error_vs_position.png", shared_y_lim)
+    plot_error_vs_position(records, "dist",  "|Error| (m)", "|Error| vs True X Position",  "abs_error_vs_position.png", shared_y_lim)
 
 
 if __name__ == "__main__":
