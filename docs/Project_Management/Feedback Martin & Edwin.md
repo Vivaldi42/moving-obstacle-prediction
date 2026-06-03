@@ -2,8 +2,8 @@
 
 # 27.05.2026
 - Take several photos to calibrate the camera and be sure that detections are accurate. Make manual measurements to be sure that the camera sees what it should see.
-- Change the visualization to show the actual and predicted position at one frame. The goal of the visualization is to show my contributions clearly.
-- Justify the parameter values in the KF, what are the optimal parameters, what parameters are chosen and why, do those parameters change over time. The different parameters can heavily influence the results.
+- **Change the visualization to show the actual and predicted position at one frame. The goal of the visualization is to show my contributions clearly.**
+- **Justify the parameter values in the KF, what are the optimal parameters, what parameters are chosen and why, do those parameters change over time. The different parameters can heavily influence the results.**
  - Try adding acceleration and gravity to the KF prediction aiming to make it more accurate. Compare the results with the old KF.
 - Send Martin and Edwin a meeting request for the project defense.
 
