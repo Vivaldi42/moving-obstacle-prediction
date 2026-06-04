@@ -39,10 +39,10 @@ Camera intrinsics - fx and fy (focal lengths in pixels along the horizontal and 
 ## Detection Pipeline
 
 1. **YOLO v8x** detects the ball and returns a bounding box (bbox).
-2. **Front-face depth sampling**: within the bbox, the cluster of pixels within 0.5 cm of the minimum depth is selected. Their pixel centroid is used as the (u, v) deprojection point and their median depth as Z.
-3. **XYZ lookup**: X and Y are read from the pre-computed XYZ map at the pixel centroid (u, v), using the depth at that pixel: `x = (u - cx) * z_uv / fx`, `y = (v - cy) * z_uv / fy`. Z is returned as the median depth of the front-face cluster. The two depth values (z_uv and median z) are nearly identical since the front-face pixels lie within 0.5 cm of each other.
+2. **Front-face depth sampling**: within the bbox, the cluster of pixels within 0.5 cm of the minimum depth is selected. Their average pixel position is used as the (u, v) reference point and their median depth as Z.
+3. **XYZ calculation**: X and Y are read from the pre-computed XYZ map at pixel (u, v), using the depth at that pixel: `x = (u - cx) * z_uv / fx`, `y = (v - cy) * z_uv / fy`. Z is the median depth of the front-face cluster. The two depth values (z_uv and median z) are nearly identical since all front-face pixels are within 0.5 cm of each other.
 
-The front-face approach is used instead of the bbox centre to reduce the Y error caused by deeper floor/background pixels inside the bbox. Selecting only the minimum-depth cluster removes most of that contamination, but the method still returns a front-surface centroid rather than the ball's geometric centre, so a residual Y bias remains (see Analysis).
+The front-face approach is used instead of the bbox centre to reduce Y error caused by background/floor pixels at the bottom of the bbox pulling the centroid down. Selecting only the closest pixels removes most of that effect. However, because the camera is mounted above the ball, the closest visible surface of the ball is its top rather than its centre, so the measured point is still above the true ball centre and a remaining Y error is expected (see Analysis).
 
 ---
 
@@ -87,18 +87,18 @@ The front-face approach is used instead of the bbox centre to reduce the Y error
 
 The pipeline shows reliable lateral (X) localisation and two consistent systematic biases: a negative Y error and a positive Z error, both present across all tested positions.
 
-**X error** (mean -1.1 cm, std 0.8 cm) is the smallest of the three axes and shows no consistent systematic trend. Values are predominantly small and negative, with no clear dependence on X position or Z distance. The mean is slightly negative and comparable in magnitude to the ±1 cm ruler measurement uncertainty, so no strong lateral bias can be claimed. At extreme lateral positions (ball near the left or right edge of the camera frame) the error is marginally larger, likely due to reduced stereo matching quality near frame edges, but the effect is small.
+**X error** (mean -1.1 cm, std 0.8 cm) is the smallest of the three axes and shows no consistent systematic trend. Values are predominantly small and negative, with no clear dependence on X position or Z distance. The mean is slightly negative and about the same size as the ±1 cm ruler measurement uncertainty, so it is not possible to conclude there is a real lateral bias. At extreme lateral positions (ball near the left or right edge of the camera frame) the error is marginally larger, likely due to reduced stereo matching quality near frame edges, but the effect is small.
 
-**Y error** (mean -5.0 cm, std 1.1 cm) is the most consistent systematic bias. The camera consistently places the ball 3-7 cm higher than the ruler measurement. The most likely reason is that the pipeline deprojects the centroid of the minimum-depth cluster, which lies on the visible front/upper surface of the ball, not at the ball's geometric centre. Because the camera is above the ball, that front-face centroid appears above the true centre in image space; deprojection therefore produces a smaller Y value and the ball is estimated too high. This dataset supports the existence of a stable residual Y bias, but it does not isolate the exact geometric contribution beyond that front-face-versus-centre mismatch.
+**Y error** (mean -5.0 cm, std 1.1 cm) is the most consistent systematic bias. The camera consistently places the ball 3-7 cm higher than the ruler measurement. The most likely reason is that the pipeline calculates the 3D position from a point on the front surface of the ball, not its centre. Because the camera is mounted above the ball, the closest visible surface of the ball is its top. That point is higher in the image than the true ball centre, so the calculated Y value is smaller (higher in space) than the real position. The larger error at Z = 0.77 m (~5-7 cm) compared to Z = 0.57 m (~3-4 cm) is consistent with this: at greater distance the ball occupies fewer pixels in the image, making the centroid position less precise, and the deprojection formula multiplies the pixel offset by z, so the same pixel-level error produces a larger error in metres. The dataset confirms a stable Y error exists but does not allow us to precisely calculate how much of it comes from this geometry alone.
 
-**Z error** (mean 4.1 cm, std 0.8 cm) is a consistent positive bias across all captures and distances. The most likely cause is ZED NEURAL depth mode, which commonly exhibits a positive systematic bias at close range (< 1 m). An additional contribution may come from the ruler reference point: distances were measured from the left camera lens, which may not coincide exactly with the ZED's calibrated optical centre used for depth computation. The bias does not strongly depend on X or Z distance within this dataset's range, though there is a slight uptick at extreme lateral positions (ball near the left or right edge of the camera frame) where stereo matching quality is lower. No correction has been applied.
+**Z error** (mean 4.1 cm, std 0.8 cm) is a consistent positive bias across all captures and distances. The most likely cause is ZED NEURAL depth mode, which tends to overestimate distances at close range (< 1 m). A smaller additional error may come from the ruler reference point: distances were measured from the left camera lens, which may not be exactly the same reference point that the ZED uses internally for depth calculation. The bias does not strongly depend on X or Z distance within this dataset's range, though there is a slight uptick at extreme lateral positions (ball near the left or right edge of the camera frame) where stereo matching quality is lower. No correction has been applied.
 
 ---
 
 ## Limitations
 
 - **Ground truth method**: positions were measured by hand with a ruler. Ruler placement error (~1 cm) and ball positioning error contribute to the reported error figures. The error numbers are an upper bound on actual pipeline error.
-- **ZED calibration**: the factory calibration is used without custom target-based recalibration. A custom calibration could reduce both the systematic Z bias and any residual distortion contributing to X error at frame edges.
+- **ZED calibration**: the factory calibration is used without any custom recalibration. A custom calibration could reduce the Z bias and any small lens distortion effects contributing to X error at the frame edges.
 - **Limited coverage**: the grid does not test Y positions other than floor height, nor Z beyond 0.77 m. Errors may be larger at longer ranges or different heights.
 - **Static ball only**: the pipeline is evaluated on a stationary ball. Dynamic captures may introduce additional blur or YOLO confidence effects not captured here.
 
@@ -106,9 +106,9 @@ The pipeline shows reliable lateral (X) localisation and two consistent systemat
 
 ## Recommendations
 
-- **Y correction**: add +5.0 cm to the measured Y value as a post-hoc correction if absolute Y accuracy is required. The std (1.1 cm) makes this practical.
-- **Z correction**: apply a fixed -4.1 cm Z offset similarly. The low std (0.8 cm) makes this practical, though edge-of-frame positions may need a slightly larger correction.
-- **Custom calibration**: if sub-3 cm accuracy is required, a custom ZED calibration and Z-distance-dependent correction curve would be the next step.
+- **Y correction**: add +5.0 cm to the measured Y value to correct the bias. The std (1.1 cm) is small enough to make this a reliable fix.
+- **Z correction**: subtract 4.1 cm from the measured Z value. The low std (0.8 cm) makes this reliable, though positions at the frame edges may need a slightly larger correction.
+- **Custom calibration**: if accuracy better than 3 cm is needed, a custom ZED calibration and a correction that varies with distance would be the next step.
 
 ---
 
