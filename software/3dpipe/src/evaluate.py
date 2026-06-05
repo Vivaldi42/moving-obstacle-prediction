@@ -1,9 +1,11 @@
 import csv
 import os
 import subprocess
+import time
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import psutil
 import pyzed.sl as sl
 from collections import deque
 from pipeline import (
@@ -12,11 +14,17 @@ from pipeline import (
     project_to_pixel, BallKalmanFilter,
 )
 
-# SVO_PATH = "/datasets/Dataset_2/Clean/HD1080_one_ball_straight_line_21-32-13.svo2"
+try:
+    import torch
+    _TORCH_CUDA = torch.cuda.is_available()
+except ImportError:
+    _TORCH_CUDA = False
+
 SVO_PATH = "/datasets/Dataset_2/Clean/HD1080_one_ball_straight_line_21-34-15.svo2"
 OUTPUT_DIR = "/app/output"
 FPS = 30
 PREDICTION_HORIZON = 0.2
+PREDICTION_STEPS = round(PREDICTION_HORIZON * FPS)  # 6
 MAX_MISSED = 5
 VISUALIZE = True
 
@@ -26,14 +34,21 @@ def run_pipeline(
     model,
     visualize: bool = False,
     output_path: str | None = None,
-) -> tuple[dict, dict]:
+) -> tuple[dict, dict, dict]:
+    """Run the full pipeline on one SVO file.
+
+    Returns:
+        ground_truth  - {frame_idx: (x, y, z)}
+        predictions   - {frame_idx: [(px, py, pz), ...]} with PREDICTION_STEPS entries per frame
+        metrics       - latency, throughput, RAM, GPU memory
+    """
     cam = open_svo(svo_path)
     mat_rgb = sl.Mat()
     mat_xyz = sl.Mat()
     kf = BallKalmanFilter(dt=1 / FPS)
 
-    ground_truth = {}
-    predictions = {}
+    ground_truth: dict = {}
+    predictions: dict = {}
     frame_idx = 0
     missed = 0
     corrections = 0
@@ -44,6 +59,13 @@ def run_pipeline(
     pred_buffer: dict = {}
     writer: cv2.VideoWriter | None = None
     tmp_path: str = ""
+
+    latencies: list[float] = []
+    process = psutil.Process()
+    ram_samples: list[float] = []
+
+    if _TORCH_CUDA:
+        torch.cuda.reset_peak_memory_stats()
 
     if visualize:
         assert output_path is not None
@@ -56,10 +78,15 @@ def run_pipeline(
             (1920, 1080),
         )
 
+    t_pipeline_start = time.perf_counter()
+
     while True:
         result = grab_frame(cam, mat_rgb, mat_xyz)
         if result is None:
             break
+
+        # Latency: from frame received to prediction output
+        t_frame_start = time.perf_counter()
 
         left_rgb, xyz_map = result
 
@@ -84,15 +111,22 @@ def run_pipeline(
         else:
             missed += 1
 
-        pred_xyz: tuple[float, float, float] | None = None
+        pred_sequence: list[tuple[float, float, float]] | None = None
         if corrections >= 2 and missed < MAX_MISSED:
-            pred_xyz = kf.predict_ahead(PREDICTION_HORIZON)
-            predictions[frame_idx] = pred_xyz
+            pred_sequence = [
+                kf.predict_ahead(s / FPS)
+                for s in range(1, PREDICTION_STEPS + 1)
+            ]
+            predictions[frame_idx] = pred_sequence
+
+        latencies.append((time.perf_counter() - t_frame_start) * 1000)
+        ram_samples.append(process.memory_info().rss / 1e6)
 
         if visualize:
             assert writer is not None
             frame_bgr = cv2.cvtColor(left_rgb, cv2.COLOR_RGB2BGR)
             current_pixel: tuple[int, int] | None = None
+            pred_xyz = pred_sequence[-1] if pred_sequence is not None else None
 
             if smoothed_xyz is not None:
                 sx, sy, sz = smoothed_xyz
@@ -125,7 +159,7 @@ def run_pipeline(
 
             if pred_xyz is not None:
                 px, py, pz = pred_xyz
-                pred_buffer[frame_idx + round(PREDICTION_HORIZON * FPS)] = pred_xyz
+                pred_buffer[frame_idx + PREDICTION_STEPS] = pred_xyz
                 pred_pixel = project_to_pixel(px, py, pz, fx, fy, cx_cam, cy_cam)
                 if pred_pixel is not None:
                     pred_trail.append(pred_pixel)
@@ -166,6 +200,8 @@ def run_pipeline(
 
         frame_idx += 1
 
+    t_pipeline_total = time.perf_counter() - t_pipeline_start
+
     if visualize:
         assert writer is not None
         assert output_path is not None
@@ -181,61 +217,118 @@ def run_pipeline(
         os.remove(tmp_path)
 
     cam.close()
-    return ground_truth, predictions
+
+    lat = np.array(latencies)
+    metrics = {
+        "latency_mean_ms": float(np.mean(lat)),
+        "latency_p95_ms": float(np.percentile(lat, 95)),
+        "latency_max_ms": float(np.max(lat)),
+        "throughput_fps": frame_idx / t_pipeline_total,
+        "ram_mean_mb": float(np.mean(ram_samples)),
+        "ram_peak_mb": float(np.max(ram_samples)),
+        "gpu_peak_mb": (
+            torch.cuda.max_memory_allocated() / 1e6 if _TORCH_CUDA else None
+        ),
+    }
+
+    return ground_truth, predictions, metrics
 
 
-def compute_fde(
+def compute_ade_fde(
     gt: dict,
     predictions: dict,
-) -> tuple[list[int], list[float]]:
-    lookahead = round(PREDICTION_HORIZON * FPS)
+) -> tuple[list[int], list[float], list[float]]:
+    """Compute ADE and FDE per prediction frame.
 
-    frames, errors = [], []
-    for frame_idx, (px, py, pz) in predictions.items():
-        gt_xyz = gt.get(frame_idx + lookahead)
-        if gt_xyz is None:
-            continue
-        gx, gy, gz = gt_xyz
-        fde = float(np.linalg.norm([px - gx, py - gy, pz - gz]))
-        frames.append(frame_idx)
-        errors.append(fde)
+    ADE = mean Euclidean error across all PREDICTION_STEPS steps.
+    FDE = Euclidean error at the final step only.
+    Frames where any future GT position is missing are skipped.
+    """
+    frames, ade_list, fde_list = [], [], []
+    for frame_idx, pred_sequence in predictions.items():
+        step_errors = []
+        for step, (px, py, pz) in enumerate(pred_sequence, 1):
+            gt_xyz = gt.get(frame_idx + step)
+            if gt_xyz is None:
+                break
+            gx, gy, gz = gt_xyz
+            step_errors.append(float(np.linalg.norm([px - gx, py - gy, pz - gz])))
 
-    return frames, errors
+        if len(step_errors) == len(pred_sequence):
+            frames.append(frame_idx)
+            ade_list.append(float(np.mean(step_errors)))
+            fde_list.append(step_errors[-1])
+
+    return frames, ade_list, fde_list
 
 
 if __name__ == "__main__":
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     model = load_model("yolov8x.pt")
 
-    ground_truth, predictions = run_pipeline(
+    ground_truth, predictions, metrics = run_pipeline(
         SVO_PATH,
         model,
         visualize=VISUALIZE,
         output_path=f"{OUTPUT_DIR}/output.mp4",
     )
 
+    # Ground truth CSV
     with open(f"{OUTPUT_DIR}/ground_truth.csv", "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["frame", "x", "y", "z"])
         for frame_idx, (x, y, z) in ground_truth.items():
             writer.writerow([frame_idx, round(x, 3), round(y, 3), round(z, 3)])
 
+    # Predictions CSV (one row per frame per step)
     with open(f"{OUTPUT_DIR}/predictions.csv", "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["frame", "pred_x", "pred_y", "pred_z"])
-        for frame_idx, (px, py, pz) in predictions.items():
-            writer.writerow([frame_idx, round(px, 3), round(py, 3), round(pz, 3)])
+        writer.writerow(["frame", "step", "pred_x", "pred_y", "pred_z"])
+        for frame_idx, pred_sequence in predictions.items():
+            for step, (px, py, pz) in enumerate(pred_sequence, 1):
+                writer.writerow([frame_idx, step, round(px, 3), round(py, 3), round(pz, 3)])
 
-    frames, errors = compute_fde(ground_truth, predictions)
+    frames, ade_list, fde_list = compute_ade_fde(ground_truth, predictions)
 
-    plt.figure()
-    plt.plot(frames, errors)
-    plt.xlabel("Frame")
-    plt.ylabel("FDE (m)")
-    plt.title("KF prediction error over time")
-    plt.savefig(f"{OUTPUT_DIR}/fde_plot.png")
+    # ADE / FDE plot
+    fig, axes = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
+
+    axes[0].plot(frames, ade_list, color="steelblue", linewidth=1)
+    axes[0].axhline(np.mean(ade_list), color="red", linestyle="--",
+                    label=f"mean {np.mean(ade_list):.3f} m")
+    axes[0].set_ylabel("ADE (m)")
+    axes[0].set_title("Average Displacement Error")
+    axes[0].legend()
+
+    axes[1].plot(frames, fde_list, color="darkorange", linewidth=1)
+    axes[1].axhline(np.mean(fde_list), color="red", linestyle="--",
+                    label=f"mean {np.mean(fde_list):.3f} m")
+    axes[1].set_ylabel("FDE (m)")
+    axes[1].set_xlabel("Frame")
+    axes[1].set_title("Final Displacement Error")
+    axes[1].legend()
+
+    plt.tight_layout()
+    plt.savefig(f"{OUTPUT_DIR}/ade_fde_plot.png")
     plt.close()
 
-    print(f"Frames evaluated: {len(errors)}")
-    print(f"Mean FDE: {np.mean(errors):.3f} m")
-    print(f"Max FDE:  {np.max(errors):.3f} m")
+    n = len(frames)
+    print(f"\n{'='*40}")
+    print(f"  Prediction Quality  (n={n} frames)")
+    print(f"{'='*40}")
+    print(f"  Mean ADE : {np.mean(ade_list):.3f} m")
+    print(f"  Mean FDE : {np.mean(fde_list):.3f} m")
+    print(f"  Max  ADE : {np.max(ade_list):.3f} m")
+    print(f"  Max  FDE : {np.max(fde_list):.3f} m")
+
+    print(f"\n{'='*40}")
+    print(f"  System Performance")
+    print(f"{'='*40}")
+    print(f"  Latency mean  : {metrics['latency_mean_ms']:.1f} ms")
+    print(f"  Latency p95   : {metrics['latency_p95_ms']:.1f} ms")
+    print(f"  Latency max   : {metrics['latency_max_ms']:.1f} ms")
+    print(f"  Throughput    : {metrics['throughput_fps']:.1f} FPS")
+    print(f"  RAM mean      : {metrics['ram_mean_mb']:.0f} MB")
+    print(f"  RAM peak      : {metrics['ram_peak_mb']:.0f} MB")
+    if metrics["gpu_peak_mb"] is not None:
+        print(f"  GPU peak VRAM : {metrics['gpu_peak_mb']:.0f} MB")

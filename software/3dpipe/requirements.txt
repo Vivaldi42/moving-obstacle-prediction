@@ -3,4 +3,5 @@ opencv-python
 ultralytics
 pyzed
 matplotlib
+psutil
 open3d; platform_machine == "x86_64"
