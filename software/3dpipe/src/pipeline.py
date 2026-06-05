@@ -217,3 +217,9 @@ class BallKalmanFilter:
 # The KF was corrected every frame with raw measurements, so its predictions are essentially a smoothed version of those measurements projected forward. Comparing that to a future raw measurement from the same source is an easy test.
 # A real error of e.g. 5 cm could report as ~0 if both the prediction and "ground truth" share the same 5 cm bias.
 # Fix: manually annotate ball positions on a sample of frames, or evaluate on a separate recording that was never used to tune the filter's noise covariances.
+
+        # # Measurement noise accounts for ZED depth noise (from static experiment: X=0.9cm, Y=1.2cm, Z=0.8cm)
+        # # plus YOLO bbox jitter on a moving ball. Values are higher than pure ZED variance floor.
+        # self.kf.measurementNoiseCov = np.diag(
+        #     [0.0003, 0.0004, 0.0003]
+        # ).astype(np.float32)
