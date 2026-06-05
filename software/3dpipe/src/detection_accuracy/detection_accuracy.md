@@ -4,9 +4,33 @@ header-includes:
   - \floatplacement{figure}{H}
 ---
 
-# Research question:
+# Research question: {.unnumbered .unlisted}
 
-# What is the detection accuracy of the YOLO and ZED depth pipeline?
+# What is the detection accuracy of the YOLO and ZED depth pipeline? {.unnumbered .unlisted}
+
+## Author: Vladislav Stefanov  {.unnumbered .unlisted}
+
+---
+
+## Abstract
+
+This report measures the 3D position accuracy of a ball detection pipeline that combines YOLO v8x object detection with a ZED stereo camera. The ball was placed at 45 known grid positions across three distances (0.57, 0.67, 0.77 m) and fifteen lateral positions (-0.7 to +0.7 m in 0.1 m steps) at a fixed floor height. The pipeline detected the ball in 41 out of 45 positions, with 4 misses at the most extreme lateral positions at the two shorter distances.
+
+The results show reliable left-right (X) accuracy with a mean error of -1.1 cm. Two consistent biases were found: a vertical (Y) overestimation of 5.0 cm and a depth (Z) overestimation of 4.1 cm, both with a standard deviation below 1.2 cm. The Y bias is most likely caused by the pipeline measuring a point on the top surface of the ball rather than its centre, since the camera is positioned above the ball. The Z bias is most likely caused by the ZED NEURAL depth mode overestimating distances at close range. Both biases are stable enough to be corrected with fixed offsets if needed.
+
+---
+
+\tableofcontents
+
+\listoffigures
+
+---
+
+## Document versions
+
+| Version | Date | Description |
+|---------|------|-------------|
+| 1.0 | 2026-06-04 | Initial version |
 
 ---
 
@@ -116,7 +140,9 @@ The pipeline shows reliable lateral (X) localisation and two consistent systemat
 
 Error = camera minus ruler. Blank = out of frame (missed).
 
-| # | Image | Det | X (m) | Y (m) | Z (m) | Err X | Err Y | Err Z | \|Error\| |
+Det = detected.
+
+| # | Image | Det | X (m) | Y (m) | Z (m) | Error X | Error Y | Error Z | \|Error\| |
 |---|-------|-----|-------|-------|-------|-------|-------|-------|-----------|
 | 1 | cap_001 | yes | 0.69 | 0.22 | 0.81 | -0.01 | -0.06 | 0.04 | 0.07 |
 | 2 | cap_002 | yes | 0.59 | 0.22 | 0.81 | -0.01 | -0.06 | 0.04 | 0.07 |
