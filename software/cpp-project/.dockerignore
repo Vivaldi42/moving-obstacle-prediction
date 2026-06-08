@@ -1,7 +1,0 @@
-build
-.git
-.gitignore
-*.o
-*.so
-*.a
-*.log

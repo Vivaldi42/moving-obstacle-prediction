@@ -1,6 +1,0 @@
-build-x86/
-build-jetson/
-__pycache__/
-*.pyc
-.venv/
-
