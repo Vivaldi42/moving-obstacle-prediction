@@ -9,7 +9,7 @@ When trying to track a moving object, there are two sources of information:
 1. **The motion model** - knowing where the object was and how fast it was moving makes it possible to predict where it is now.
 2. **The sensor** - the camera measured the object at a certain position, but the measurement is noisy.
 
-Both are imperfect. The Kalman filter is an algorithm that **optimally combines these two noisy sources** every single frame to produce the best possible estimate of where the object is.
+Both sources are imperfect. The Kalman filter is an algorithm that optimally combines these two noisy sources every frame to produce the best possible estimate of where the object is.
 
 ---
 
@@ -41,7 +41,7 @@ $$\mathbf{v} = \begin{bmatrix} 1 \\ 2 \\ 3 \end{bmatrix} \quad \Rightarrow \quad
 
 ## State Vector
 
-Everything the filter tracks is packed into one vector called the **state**:
+Everything the filter tracks is packed into one vector called the **state** or **state vector**:
 
 $$\mathbf{s} = \begin{bmatrix} x \\ y \\ z \\ v_x \\ v_y \\ v_z \end{bmatrix}$$
 

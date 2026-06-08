@@ -11,7 +11,7 @@ from collections import deque
 from pipeline import (
     open_svo, get_intrinsics, grab_frame,
     load_model, detect_ball_bbox, calc_ball_3d_position,
-    project_to_pixel, BallKalmanFilter,
+    project_to_pixel, BallKalmanFilter, KFConfig,
 )
 
 try:
@@ -20,7 +20,19 @@ try:
 except ImportError:
     _TORCH_CUDA = False
 
-SVO_PATH = "/datasets/Dataset_2/Clean/HD1080_one_ball_straight_line_21-34-15.svo2"
+SVO_PATHS = [
+    "/datasets/Dataset_2/Clean/HD1080_one_ball_straight_line_21-34-15.svo2",
+    "/datasets/Dataset_2/Clean/HD1080_one_ball_straight_line_21-32-13.svo2",
+    "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-29.svo2",
+    # "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-29.svo2",
+    "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-44.svo2",
+    "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-05.svo2",
+    "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-18.svo2",
+    # "/datasets/Dataset_2/Clean/HD1080_ball_behind_box_21-40-04.svo2",
+    # "/datasets/Dataset_2/Clean/HD1080_ball_roll_21-53-17.svo2",
+    # "/datasets/Dataset_2/Clean/HD1080_ball_up_a_ramp_21-46-08.svo2",
+    # "/datasets/Dataset_2/Clean/HD1080_ball_up_a_ramp_and_back_21-45-51.svo2",
+]
 OUTPUT_DIR = "/app/output"
 FPS = 30
 PREDICTION_HORIZON = 0.2
@@ -28,10 +40,31 @@ PREDICTION_STEPS = round(PREDICTION_HORIZON * FPS)  # 6
 MAX_MISSED = 5
 VISUALIZE = True
 
+# ZED per-axis variance from static analysis (std: X=0.8cm, Y=1.1cm, Z=0.8cm)
+_ZED_X = 0.008 ** 2   # 0.000064
+_ZED_Y = 0.011 ** 2   # 0.000121
+_ZED_Z = 0.008 ** 2   # 0.000064
+
+CONFIGS = [
+    KFConfig(name="baseline",
+             vel_process_noise=0.01,
+             meas_noise_x=0.001, meas_noise_y=0.001, meas_noise_z=0.001),
+    KFConfig(name="zed_noise",
+             vel_process_noise=0.01,
+             meas_noise_x=_ZED_X, meas_noise_y=_ZED_Y, meas_noise_z=_ZED_Z),
+    KFConfig(name="high_vel",
+             vel_process_noise=0.1,
+             meas_noise_x=0.001, meas_noise_y=0.001, meas_noise_z=0.001),
+    KFConfig(name="zed_noise_high_vel",
+             vel_process_noise=0.1,
+             meas_noise_x=_ZED_X, meas_noise_y=_ZED_Y, meas_noise_z=_ZED_Z),
+]
+
 
 def run_pipeline(
     svo_path: str,
     model,
+    config: KFConfig | None = None,
     visualize: bool = False,
     output_path: str | None = None,
 ) -> tuple[dict, dict, dict]:
@@ -45,7 +78,7 @@ def run_pipeline(
     cam = open_svo(svo_path)
     mat_rgb = sl.Mat()
     mat_xyz = sl.Mat()
-    kf = BallKalmanFilter(dt=1 / FPS)
+    kf = BallKalmanFilter(dt=1 / FPS, config=config)
 
     ground_truth: dict = {}
     predictions: dict = {}
@@ -266,69 +299,120 @@ if __name__ == "__main__":
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     model = load_model("yolov8x.pt")
 
-    ground_truth, predictions, metrics = run_pipeline(
-        SVO_PATH,
-        model,
-        visualize=VISUALIZE,
-        output_path=f"{OUTPUT_DIR}/output.mp4",
-    )
+    # seq_name: just the filename without extension, used for labelling
+    seq_names = [os.path.splitext(os.path.basename(p))[0] for p in SVO_PATHS]
 
-    # Ground truth CSV
-    with open(f"{OUTPUT_DIR}/ground_truth.csv", "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["frame", "x", "y", "z"])
-        for frame_idx, (x, y, z) in ground_truth.items():
-            writer.writerow([frame_idx, round(x, 3), round(y, 3), round(z, 3)])
+    # per_seq_rows: one entry per (config, sequence) for the detailed CSV
+    per_seq_rows: list[dict] = []
 
-    # Predictions CSV (one row per frame per step)
-    with open(f"{OUTPUT_DIR}/predictions.csv", "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["frame", "step", "pred_x", "pred_y", "pred_z"])
-        for frame_idx, pred_sequence in predictions.items():
-            for step, (px, py, pz) in enumerate(pred_sequence, 1):
-                writer.writerow([frame_idx, step, round(px, 3), round(py, 3), round(pz, 3)])
+    # sweep_results: one entry per config, holding aggregated stats across all sequences
+    sweep_results: list[dict] = []
 
-    frames, ade_list, fde_list = compute_ade_fde(ground_truth, predictions)
+    for cfg in CONFIGS:
+        cfg_ade_all: list[float] = []
+        cfg_fde_all: list[float] = []
+        cfg_latencies: list[float] = []
+        cfg_fps: list[float] = []
 
-    # ADE / FDE plot
-    fig, axes = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
+        for svo_path, seq_name in zip(SVO_PATHS, seq_names):
+            print(f"Running: {cfg.name}  |  {seq_name} ...")
+            gt, preds, metrics = run_pipeline(svo_path, model, config=cfg, visualize=False)
+            frames, ade_list, fde_list = compute_ade_fde(gt, preds)
 
-    axes[0].plot(frames, ade_list, color="steelblue", linewidth=1)
-    axes[0].axhline(np.mean(ade_list), color="red", linestyle="--",
-                    label=f"mean {np.mean(ade_list):.3f} m")
+            cfg_ade_all.extend(ade_list)
+            cfg_fde_all.extend(fde_list)
+            cfg_latencies.append(metrics["latency_p95_ms"])
+            cfg_fps.append(metrics["throughput_fps"])
+
+            per_seq_rows.append({
+                "config":          cfg.name,
+                "sequence":        seq_name,
+                "n":               len(frames),
+                "mean_ade_m":      round(float(np.mean(ade_list)), 4) if ade_list else None,
+                "mean_fde_m":      round(float(np.mean(fde_list)), 4) if fde_list else None,
+                "max_ade_m":       round(float(np.max(ade_list)),  4) if ade_list else None,
+                "max_fde_m":       round(float(np.max(fde_list)),  4) if fde_list else None,
+                "latency_mean_ms": round(metrics["latency_mean_ms"], 2),
+                "latency_p95_ms":  round(metrics["latency_p95_ms"],  2),
+                "latency_max_ms":  round(metrics["latency_max_ms"],  2),
+                "throughput_fps":  round(metrics["throughput_fps"],  2),
+                "ram_peak_mb":     round(metrics["ram_peak_mb"], 1),
+                "gpu_peak_mb":     round(metrics["gpu_peak_mb"], 1) if metrics["gpu_peak_mb"] else None,
+            })
+
+        sweep_results.append({
+            "config":    cfg,
+            "ade_all":   cfg_ade_all,
+            "fde_all":   cfg_fde_all,
+            "lat_p95":   float(np.mean(cfg_latencies)),
+            "fps":       float(np.mean(cfg_fps)),
+        })
+
+    # --- Comparison table (aggregated across all sequences) ---
+    col = 22
+    n_seqs = len(SVO_PATHS)
+    header = (f"{'Config':<{col}} {'n':>5} {'ADE mean':>9} {'FDE mean':>9} "
+              f"{'ADE max':>9} {'FDE max':>9} {'Lat p95':>9} {'FPS':>6}")
+    print(f"\n{'='*len(header)}")
+    print(f"  {n_seqs} sequence(s) - overall summary")
+    print(f"{'='*len(header)}")
+    print(header)
+    print("-" * len(header))
+    for r in sweep_results:
+        ade, fde = r["ade_all"], r["fde_all"]
+        print(f"{r['config'].name:<{col}} {len(ade):>5} "
+              f"{np.mean(ade):>8.3f}m {np.mean(fde):>8.3f}m "
+              f"{np.max(ade):>8.3f}m {np.max(fde):>8.3f}m "
+              f"{r['lat_p95']:>8.1f}ms {r['fps']:>5.1f}")
+
+    # --- Per-sequence detail table ---
+    if n_seqs > 1:
+        print(f"\n--- Per-sequence detail ---")
+        seq_col = max(len(s) for s in seq_names) + 2
+        for r in per_seq_rows:
+            ade = r["mean_ade_m"] or 0
+            fde = r["mean_fde_m"] or 0
+            print(f"  {r['config']:<{col}} {r['sequence']:<{seq_col}} "
+                  f"ADE {ade:.3f}m  FDE {fde:.3f}m")
+
+    # --- Detailed CSV (one row per config × sequence) ---
+    with open(f"{OUTPUT_DIR}/sweep_results.csv", "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(list(per_seq_rows[0].keys()))
+        for row in per_seq_rows:
+            w.writerow(list(row.values()))
+
+    # --- ADE / FDE comparison plot (means across all sequences) ---
+    config_names = [r["config"].name for r in sweep_results]
+    mean_ades = [np.mean(r["ade_all"]) for r in sweep_results]
+    mean_fdes = [np.mean(r["fde_all"]) for r in sweep_results]
+
+    x = np.arange(len(config_names))
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+    axes[0].bar(x, mean_ades, color="steelblue")
+    axes[0].set_xticks(x)
+    axes[0].set_xticklabels(config_names, rotation=15, ha="right")
     axes[0].set_ylabel("ADE (m)")
-    axes[0].set_title("Average Displacement Error")
-    axes[0].legend()
+    axes[0].set_title(f"Mean ADE across {n_seqs} sequence(s)")
 
-    axes[1].plot(frames, fde_list, color="darkorange", linewidth=1)
-    axes[1].axhline(np.mean(fde_list), color="red", linestyle="--",
-                    label=f"mean {np.mean(fde_list):.3f} m")
+    axes[1].bar(x, mean_fdes, color="darkorange")
+    axes[1].set_xticks(x)
+    axes[1].set_xticklabels(config_names, rotation=15, ha="right")
     axes[1].set_ylabel("FDE (m)")
-    axes[1].set_xlabel("Frame")
-    axes[1].set_title("Final Displacement Error")
-    axes[1].legend()
+    axes[1].set_title(f"Mean FDE across {n_seqs} sequence(s)")
 
     plt.tight_layout()
     plt.savefig(f"{OUTPUT_DIR}/ade_fde_plot.png")
     plt.close()
 
-    n = len(frames)
-    print(f"\n{'='*40}")
-    print(f"  Prediction Quality  (n={n} frames)")
-    print(f"{'='*40}")
-    print(f"  Mean ADE : {np.mean(ade_list):.3f} m")
-    print(f"  Mean FDE : {np.mean(fde_list):.3f} m")
-    print(f"  Max  ADE : {np.max(ade_list):.3f} m")
-    print(f"  Max  FDE : {np.max(fde_list):.3f} m")
-
-    print(f"\n{'='*40}")
-    print(f"  System Performance")
-    print(f"{'='*40}")
-    print(f"  Latency mean  : {metrics['latency_mean_ms']:.1f} ms")
-    print(f"  Latency p95   : {metrics['latency_p95_ms']:.1f} ms")
-    print(f"  Latency max   : {metrics['latency_max_ms']:.1f} ms")
-    print(f"  Throughput    : {metrics['throughput_fps']:.1f} FPS")
-    print(f"  RAM mean      : {metrics['ram_mean_mb']:.0f} MB")
-    print(f"  RAM peak      : {metrics['ram_peak_mb']:.0f} MB")
-    if metrics["gpu_peak_mb"] is not None:
-        print(f"  GPU peak VRAM : {metrics['gpu_peak_mb']:.0f} MB")
+    # --- Visualise best config on first sequence ---
+    if VISUALIZE:
+        best = min(sweep_results, key=lambda r: np.mean(r["fde_all"]))
+        print(f"\nVisualising best config ({best['config'].name}) on: {seq_names[0]}")
+        run_pipeline(
+            SVO_PATHS[0], model,
+            config=best["config"],
+            visualize=True,
+            output_path=f"{OUTPUT_DIR}/output.mp4",
+        )

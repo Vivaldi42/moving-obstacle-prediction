@@ -1,9 +1,23 @@
 import cv2
 import numpy as np
 import pyzed.sl as sl
+from dataclasses import dataclass
 from ultralytics.models import YOLO
 
 SPORTS_BALL_CLASS_ID = 32
+
+
+@dataclass
+class KFConfig:
+    name: str
+    # How much the filter allows velocity to change per frame.
+    # Higher = adapts faster to acceleration, lower = smoother but lags on speed changes.
+    vel_process_noise: float = 0.01
+    # Camera measurement noise per axis (variance in m²).
+    # From ZED static analysis: X std=0.8cm, Y std=1.1cm, Z std=0.8cm.
+    meas_noise_x: float = 0.001
+    meas_noise_y: float = 0.001
+    meas_noise_z: float = 0.001
 
 
 def open_svo(path: str) -> sl.Camera:
@@ -141,7 +155,10 @@ class BallKalmanFilter:
     
     Only position is measured, velocity is inferred by the filter.
     """
-    def __init__(self, dt: float) -> None:
+    def __init__(self, dt: float, config: KFConfig | None = None) -> None:
+        if config is None:
+            config = KFConfig(name="default")
+
         # 6 state variables (x, y, z, vx, vy, vz), 3 measurements (x, y, z)
         self.kf = cv2.KalmanFilter(6, 3)
 
@@ -162,14 +179,14 @@ class BallKalmanFilter:
             [0, 0, 1, 0, 0, 0],
         ], dtype=np.float32)
 
-        # Trust in the physics model. Lower value = more trust.
-        # Velocity noise is higher because the ball can change speed unexpectedly.
+        vpn = config.vel_process_noise
         self.kf.processNoiseCov = np.diag(
-            [0.0001, 0.0001, 0.0001, 0.01, 0.01, 0.01]
+            [0.0001, 0.0001, 0.0001, vpn, vpn, vpn]
         ).astype(np.float32)
 
-        # Noise in the camera measurements. Lower valur = more trust in the camera.
-        self.kf.measurementNoiseCov = np.eye(3, dtype=np.float32) * 0.001
+        self.kf.measurementNoiseCov = np.diag(
+            [config.meas_noise_x, config.meas_noise_y, config.meas_noise_z]
+        ).astype(np.float32)
 
         # errorCovPost is the uncertainty matrix. Setting it to identity (1s on diagonal)
         # makes the filter trust the first measurement heavily, before it has converged.
