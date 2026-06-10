@@ -1,3 +1,17 @@
+# 09.06.2026
+- In the project report:
+  - Add a section answering the research questions.
+  - Mention that acceleration in KF may be beneficial.
+- Handover section in the report:
+  - Future developments, eg. DAv3. 
+  - Explain how the project and its continuation fit in the broader context of HTES Lectoraat.
+- Reflection section in the report (Professional Standard):
+  - Explain the structured approach and process, what went well, what could be improved
+  - Selected methodologies (reference Engineering design process/approach).
+- After the final submission:
+  - Understand better KF.
+  - Check if the system can work with acceleration.
+
 # 01.06.2026
 - The detection error (5-6 cm) is not too bad.
 - Check if there are other Docker containers running on Brum.
