@@ -39,6 +39,34 @@ The scope of this project covers detection accuracy characterization, prediction
 
 ---
 
+## Research questions
+
+### Main question
+
+**How can a 3D depth-based perception pipeline reliably detect, track and predict the short-term motion of a dynamic obstacle for mobile robotics applications?**
+
+The project answers this question with a three-stage pipeline: a stereo camera and object detector provide a 3D position each frame, a Kalman filter tracks the position and velocity over time and the same filter extrapolates a short time ahead to predict the obstacle's future position. Evaluation shows that this approach achieves centimeter-level detection and prediction accuracy, sufficient for short-horizon obstacle avoidance. As an added benefit, the pipeline also runs within the real-time constraints of the target platforms, exceeding the camera's frame rate.
+
+### Sub-questions
+
+**RQ1 - Which detection, tracking and prediction methods are suitable for this application?**
+
+A suitable approach combines an image-based object detector, which must run fast enough to keep pace with the camera and provide a 3D position each frame, with a recursive state estimator that combines these noisy measurements over time into smooth position and velocity estimates suitable for short-term extrapolation. For this project, YOLO v8x was selected for detection and a Kalman filter with a constant-velocity motion model for tracking and prediction. The reasoning behind these choices and their tradeoffs are discussed in the section Implementation.
+
+**RQ2 - What 3D localization accuracy can be achieved by combining ZED stereo depth with YOLO bounding boxes?**
+
+Combining ZED stereo depth with YOLO bounding boxes gives an average 3D localization accuracy of 6.7 cm. Lateral positioning is accurate and shows no systematic trend, while the vertical and depth axes show small but consistent biases that can be corrected with fixed offsets. This level of accuracy is sufficient for short-horizon obstacle avoidance, though not for applications requiring sub-centimeter precision. Full results are given in the section Evaluation and Results.
+
+**RQ3 - How can a Kalman filter track an obstacle's position and velocity from noisy measurements?**
+
+A Kalman filter tracks an obstacle by maintaining a state of position (x, y, z) and velocity (vx, vy, vz), predicting the next state from a motion model and correcting that prediction with each new noisy measurement. How much the filter trusts the model versus the measurement is controlled by its noise parameters, and calibrating these to the sensor's actual error characteristics was found to improve both tracking and prediction quality. The filter design, motion model and parameter tuning are described in the section Implementation.
+
+**RQ4 - How accurately can the short-term future position of an obstacle be predicted from its tracked position and velocity?**
+
+Extrapolating from the tracked position and velocity predicts an obstacle's position a short time ahead with an average error of about 1 cm and a worst-case error of about 2 cm, evaluated on smooth ball trajectories. This is accurate enough for short-horizon obstacle avoidance (<1 s). The approach works best for motion that is linear or at constant velocity. For motion involving bounces or acceleration, prediction accuracy would likely benefit from extending the motion model to account for acceleration. These results and this limitation are discussed further in the sections Evaluation, Results and Conclusions.
+
+---
+
 ## System Overview
 
 The pipeline consists of three stages: detection, state estimation and prediction.
@@ -81,6 +109,8 @@ $$F = \begin{bmatrix} 1 & 0 & 0 & \Delta t & 0 & 0 \\ 0 & 1 & 0 & 0 & \Delta t &
 Multiplying $F$ by the state vector shows what the model predicts for each variable: each position advances by the corresponding velocity times the time step, and velocity is carried forward unchanged.
 
 $$F\mathbf{x} = \begin{bmatrix} x + v_x \Delta t \\ y + v_y \Delta t \\ z + v_z \Delta t \\ v_x \\ v_y \\ v_z \end{bmatrix}$$
+
+A potential improvement of the system would be extending the motion model to account for acceleration.
 
 **Noise covariances** - Two matrices control how much the filter trusts the motion model versus the camera measurement. The measurement noise matrix is set from the results of the static accuracy experiment, with standard deviation of 0.8-1.1 cm per axis. The process noise matrix controls how quickly the velocity estimate is allowed to change between frames - a higher value lets the filter react faster to acceleration at the cost of noisier velocity estimates. The effect of these parameters on prediction accuracy is explored in the Kalman Filter Design and Tuning document.
 
@@ -161,7 +191,7 @@ The pipeline detected the ball in 41 out of 45 captures. The 4 misses occurred a
 
 Lateral (X) localization is reliable with no clear trend across position or distance. The Y and Z axes show consistent biases. The Y bias is most likely caused by the camera measuring the top surface of the ball rather than its center. The Z bias is most likely caused by the ZED NEURAL depth mode overestimating distance at close range (<1 m). Both biases are stable enough to be corrected with fixed offsets: +5.0 cm on Y and -4.1 cm on Z. Full analysis and per-capture data are in the Detection Accuracy document.
 
-![Combined 3D error vs lateral position split by distance, showing the bias is stable across positions](../output/abs_error_vs_position.png)
+![Combined 3D error vs lateral position split by distance, showing the bias is stable across positions](../../output/abs_error_vs_position.png)
 
 ### Prediction performance
 
@@ -174,7 +204,7 @@ The table below shows mean ADE and FDE averaged across all 6 sequences for each 
 | high_vel | 1.3 cm | 2.1 cm | 8.8 ms | 35.8 fps |
 | zed_noise_high_vel | 1.3 cm | 2.1 cm | 8.8 ms | 35.8 fps |
 
-![Mean ADE and FDE per Kalman filter configuration across all 6 sequences](../output/ade_fde_plot.png)
+![Mean ADE and FDE per Kalman filter configuration across all 6 sequences](../../output/ade_fde_plot.png)
 
 The three non-baseline configurations perform equivalently at 1.3 cm mean ADE and 2.1 cm mean FDE, both slightly better than the baseline. The improvement can come from either of two independent changes: calibrating the measurement noise from the static ZED experiment (zed_noise), or raising the process noise to allow faster velocity adaptation (high_vel). Each change alone produces the same gain, and combining them (zed_noise_high_vel) yields no further improvement. Latency and throughput are consistent across all configurations, with p95 latency around 9 ms and throughput above 35 fps. Peak RAM usage ranged from 2.6 to 3.2 GB across configurations. Detailed per-sequence results are in the sweep_results.csv output file.
 
@@ -194,17 +224,50 @@ The pipeline demonstrates that a ZED stereo camera and YOLO v8x can provide suff
 
 **The reported prediction error is likely optimistic.** Because the ground truth is derived from the same YOLO and ZED pipeline, systematic errors cancel in the ADE and FDE calculation. An evaluation against independently annotated ground truth would give a more accurate picture of real-world prediction quality.
 
-**The constant-velocity model is the main limiting assumption.** The model performs well on straight-line and diagonal throws but will lag on bounces, accelerating motion or curved trajectories. For applications where the obstacle exhibits non-linear motion, a more expressive motion model would be the natural next step.
+**The constant-velocity model is the main limiting assumption.** The model performs well on straight-line and diagonal throws but will lag on bounces, accelerating motion or curved trajectories. For applications where the obstacle exhibits non-linear motion, a more expressive motion model such as one accounting for acceleration would be the natural next step.
 
 ---
 
 ## Recommendations
 
-The following extensions would increase the system's capability and readiness for real-world deployment.
+The following extensions to the delivered pipeline would increase the system's capability and readiness for real-world deployment.
 
-**Multi-object tracking** - The current pipeline tracks a single object at a time. Extending it to handle multiple simultaneous obstacles would be required for real deployment, where a robot may encounter several moving objects at once. This would involve associating each new detection with an existing track across frames and maintaining a separate Kalman filter state per tracked object.
+**Multi-object tracking**
 
-**Real platform deployment and performance testing** - All evaluation was conducted on recorded SVO files on a development machine. Deploying the pipeline on a Jetson compute module mounted on the Jackal UGV or Avular Origin One would test real-time performance under embedded hardware constraints, where memory and compute budget are more limited. Key metrics to re-evaluate on-platform are end-to-end latency, throughput and peak RAM usage.
+ The current pipeline tracks a single object at a time. Extending it to handle multiple simultaneous obstacles would be required for real deployment, where a robot may encounter several moving objects at once. This would involve associating each new detection with an existing track across frames and maintaining a separate Kalman filter state per tracked object.
 
-**Navigation interface for collision avoidance** - The pipeline currently outputs a single predicted 3D position 0.2 seconds ahead. To be useful to an autonomous vehicle, this output needs to be translated into an actionable signal for the motion planner. A practical interface would publish, for each tracked obstacle, the full sequence of predicted positions over the prediction horizon - for example six (x, y, z) positions at 33 ms intervals leading up to 0.2 s. The motion planner can then check whether any predicted position falls within a safety corridor in front of the robot and compute a time-to-collision estimate. A stop command would be issued when a predicted obstacle position enters the robot's forward zone within the horizon, allowing the platform to halt before the obstacle reaches its path rather than reacting only once it is already present.
+**Real platform deployment and performance testing**
 
+ All evaluation was conducted on recorded SVO files on a development machine. Deploying the pipeline on a Jetson compute module mounted on the Jackal UGV or Avular Origin One would test real-time performance under embedded hardware constraints, where memory and compute budget are more limited. Key metrics to re-evaluate on-platform are end-to-end latency, throughput and peak RAM usage.
+
+**Interface to the vehicle motion planar**
+
+ The pipeline currently outputs a single predicted 3D position 0.2 seconds ahead. To be useful to an autonomous vehicle, this output needs to be translated into an actionable signal for the motion planner. A practical interface would publish, for each tracked obstacle, the full sequence of predicted positions over the prediction horizon - for example six (x, y, z) positions at 33 ms intervals leading up to 0.2 s. The motion planner can then check whether any predicted position falls within a safety corridor in front of the robot and compute a time-to-collision estimate. A stop command would be issued when a predicted obstacle position enters the robot's forward zone within the horizon, allowing the platform to halt before the obstacle reaches its path rather than reacting only once it is already present.
+
+---
+
+## Handover
+
+This section outlines longer-term research directions for a continuation of this project and how they connect to the broader research agenda of the HTES research group.
+
+**World model approaches**
+
+ The original project plan framed an investigation in both classical and world-model approaches as a research objective. Within this project, world models were researched only theoretically, through literature study and small-scale experiments, and were not implemented or evaluated as part of the delivered pipeline. Researching thise technologies further remains an open direction for a continuation project.
+
+- **Depth Anything v3 (DA3)** - early in the project, DA3 was used to generate a point cloud of a room from a single camera, with promising results. A continuation could test DA3 more thoroughly on a physical robot platform such as the Jackal UGV.
+- **JEPA / V-JEPA** - identified by stakeholders as a promising direction for a follow-up project. The pipeline and results from the current project can serve as a classical baseline against which a JEPA-based approach could be compared.
+- **Other technologies** - NVIDIA Cosmos, Dreamer v3, DynamicNeRF, HexPlane, SMORE, MONet, ConceptGraphs, Isaac Perceptor and Dino v2 were identified in the project plan but not yet researched or tested. These remain candidates for future investigation, to be prioritized based on their relevance and maturity at the time.
+
+**Validation of future approaches**
+
+ The evaluation approach developed in this project could be reused or extended when assessing future world-model approaches, so that results remain comparable to the classical baseline established here.
+
+**Fit within the HTES research group**
+
+ This project delivers a reusable tracking and prediction module for dynamic obstacles, targeting HTES robotics platforms including the Jackal UGV, the Avular Origin One, the Triangular Robot Platform and the Brum. A continuation of this project, including the world-model directions described above, fits into the broader HTES research agenda in several application areas:
+
+- **Product identification and quality determination** - the 3D localization and object detection modules could support identifying objects and checking their position or dimensions.
+- **Robots for basic manufacturing actions** - the tracking and prediction module supports safe operation around moving obstacles during manipulation tasks.
+- **Scene interpretation** - world-model approaches such as DA3, point clouds and Cosmos point toward general scene understanding in dynamic environments, not just static ones, which could be valuable for future research at the research group.
+
+These areas have been discussed with Teade Punter and align with the long-term research of the HTES research group.
