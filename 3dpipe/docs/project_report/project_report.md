@@ -21,7 +21,7 @@ header-includes:
 
 # Author: Vladislav Stefanov {.unnumbered .unlisted}
 
-# Date: 2026-06-10 {.unnumbered .unlisted}
+# Date: 2026-06-15 {.unnumbered .unlisted}
 
 # Fontys University of Applied Sciences {.unnumbered .unlisted}
 
@@ -50,6 +50,7 @@ Detection accuracy was evaluated across a grid of known positions, identifying t
 |---------|------|-------------|
 | 1.0 | 2026-06-05 | Initial version |
 | 2.0 | 2026-06-10 | Extended the document with the Research questions, Handover and Reflection sections |
+| 3.0 | 2026-06-10 | Linking learning outcomes in the Reflection section. Document approved by the first assessor |
 
 ---
 
@@ -69,7 +70,7 @@ The scope of this project covers detection accuracy characterization, prediction
 
 **How can a 3D depth-based perception pipeline reliably detect, track and predict the short-term motion of a dynamic obstacle for mobile robotics applications?**
 
-The project answers this question with a three-stage pipeline: a stereo camera and object detector provide a 3D position each frame, a Kalman filter tracks the position and velocity over time and the same filter extrapolates a short time ahead to predict the obstacle's future position. Evaluation shows that this approach achieves centimeter-level detection and prediction accuracy, sufficient for short-horizon obstacle avoidance. As an added benefit, the pipeline also runs within the real-time constraints of the target platforms, exceeding the camera's frame rate.
+The project answers this question with a three-stage pipeline: a stereo camera and object detector provide a 3D position each frame (x, y, z), a Kalman filter tracks the position and velocity over time and the same filter extrapolates a short time ahead to predict the obstacle's future position. Evaluation shows that this approach achieves centimeter-level detection and prediction accuracy, sufficient for short-horizon obstacle avoidance. As an added benefit, the pipeline also runs within the real-time constraints of the target platforms, exceeding the camera's frame rate.
 
 \vspace{\baselineskip}
 
@@ -83,7 +84,7 @@ A suitable approach combines an image-based object detector, which must run fast
 
 **RQ2 - What 3D localization accuracy can be achieved by combining ZED stereo depth with YOLO bounding boxes?**
 
-Combining ZED stereo depth with YOLO bounding boxes gives an average 3D localization accuracy of 6.7 cm. Lateral positioning is accurate and shows no systematic trend, while the vertical and depth axes show small but consistent biases that can be corrected with fixed offsets. This level of accuracy is sufficient for short-horizon obstacle avoidance, though not for applications requiring sub-centimeter precision. Full results are given in the section Evaluation and Results.
+Combining ZED stereo depth with YOLO bounding boxes gives an average 3D localization accuracy of 6.7 cm. Lateral positioning (X) is accurate and shows no systematic trend, while the vertical (Y) and depth (Z) axes show small but consistent biases that can be corrected with fixed offsets. This level of accuracy is sufficient for short-horizon obstacle avoidance, though not for applications requiring sub-centimeter precision. Full results are given in the section Evaluation and Results.
 
 \vspace{\baselineskip}
 
@@ -117,7 +118,7 @@ The pipeline consists of three stages: detection, state estimation and predictio
 
 **Prediction** - The Kalman filter extrapolates the current state forward 0.2 seconds using a constant-velocity motion model, producing a predicted future position.
 
-The pipeline is containerized using Docker for deployment on the target robotics platforms. A detailed description of the architecture and component design is given in the System Design document.
+The pipeline is containerized using Docker for deployment on the target robotics platforms. A detailed description of the architecture and component design is given in the System Design Document.
 
 ![Pipeline architecture: three stages (perception, state estimation and output) connected by data flow from camera input to annotated video and recorded trajectories. YOLO v8x and ZED stereo depth estimation are fused into a 3D position, which a Kalman filter uses to track position and velocity and extrapolate 0.2 s ahead.](system_design.png)
 
@@ -160,7 +161,7 @@ A potential improvement of the system would be extending the motion model to acc
 
 \vspace{\baselineskip}
 
-**Noise covariances** - Two matrices control how much the filter trusts the motion model versus the camera measurement. The measurement noise matrix is set from the results of the static accuracy experiment, with standard deviation of 0.8-1.1 cm per axis. The process noise matrix controls how quickly the velocity estimate is allowed to change between frames - a higher value lets the filter react faster to acceleration at the cost of noisier velocity estimates. The effect of these parameters on prediction accuracy is explored in the Kalman Filter Design and Tuning document.
+**Noise covariances** - Two matrices control how much the filter trusts the motion model versus the camera measurement. The measurement noise matrix is set from the results of the static accuracy experiment, with standard deviation of 0.8-1.1 cm per axis. The process noise matrix controls how quickly the velocity estimate is allowed to change between frames - a higher value lets the filter react faster to acceleration at the cost of noisier velocity estimates. The effect of these parameters on prediction accuracy is explored in the Kalman Filter Design and Tuning Document.
 
 \vspace{\baselineskip}
 
@@ -196,7 +197,7 @@ Evaluation was split into two parts: detection accuracy and prediction performan
 
 ### Detection accuracy
 
-To characterize the 3D localization error of the pipeline, a tennis ball was placed at 45 known grid positions across three distances (0.57, 0.67 and 0.77 m) and 15 lateral positions (-0.7 to +0.7 m in 0.1 m steps) at a fixed floor height. Positions were measured with a ruler (manual accuracy ±1 cm). The pipeline was run on each capture and the reported 3D position was compared against the ruler measurement. Per-axis mean error and standard deviation were computed for X (lateral), Y (vertical) and Z (depth), along with the combined 3D Euclidean error. Full methodology and results are given in the Detection Accuracy document.
+To characterize the 3D localization error of the pipeline, a tennis ball was placed at 45 known grid positions across three distances (0.57, 0.67 and 0.77 m) and 15 lateral positions (-0.7 to +0.7 m in 0.1 m steps) at a fixed floor height. Positions were measured with a ruler (manual accuracy ±1 cm). The pipeline was run on each capture and the reported 3D position was compared against the ruler measurement. Per-axis mean error and standard deviation were computed for X (lateral), Y (vertical) and Z (depth), along with the combined 3D Euclidean error. Full methodology and results are given in the Detection Accuracy Document.
 
 \vspace{\baselineskip}
 
@@ -207,11 +208,11 @@ Prediction performance was evaluated by running the pipeline on 6 recorded seque
 - **ADE (average displacement error)** - the mean 3D Euclidean error across all 6 prediction steps leading up to the 0.2 s horizon.
 - **FDE (final displacement error)** - the 3D Euclidean error at the final step only (0.2 s ahead).
 
-Four Kalman filter configurations were tested, varying the process noise and measurement noise parameters. This sweep is described in detail in the Kalman Filter Design and Tuning document.
+Four Kalman filter configurations were tested, varying the process noise and measurement noise parameters. This sweep is described in detail in the Kalman Filter Design and Tuning Document.
 
 System performance was also measured per sequence: per-frame latency (mean, 95th percentile and maximum), throughput in frames per second and peak RAM and GPU memory usage.
 
-More information about the benchmark metrics can be found in the Evaluation Metrics document.
+More information about the benchmark metrics can be found in the Evaluation Metrics Document.
 
 \vspace{\baselineskip}
 
@@ -247,7 +248,7 @@ The pipeline detected the ball in 41 out of 45 captures. The 4 misses occurred a
 | Z (depth) | +4.1 cm | 0.8 cm | Systematic positive bias |
 | Combined | 6.7 cm | 0.9 cm | - |
 
-Lateral (X) localization is reliable with no clear trend across position or distance. The Y and Z axes show consistent biases. The Y bias is most likely caused by the camera measuring the top surface of the ball rather than its center. The Z bias is most likely caused by the ZED NEURAL depth mode overestimating distance at close range (<1 m). Both biases are stable enough to be corrected with fixed offsets: +5.0 cm on Y and -4.1 cm on Z. Full analysis and per-capture data are in the Detection Accuracy document.
+Lateral (X) localization is reliable with no clear trend across position or distance. The Y and Z axes show consistent biases. The Y bias is most likely caused by the camera measuring the top surface of the ball rather than its center. The Z bias is most likely caused by the ZED NEURAL depth mode overestimating distance at close range (<1 m). Both biases are stable enough to be corrected with fixed offsets: +5.0 cm on Y and -4.1 cm on Z. Full analysis and per-capture data are in the Detection Accuracy Document.
 
 ![Combined 3D error vs lateral position split by distance, showing the bias is stable across positions](../../output/abs_error_vs_position.png)
 
@@ -346,6 +347,8 @@ The evaluation approach developed in this project could be reused or extended wh
 
 These areas have been discussed with Teade Punter who agreed that they align with the long-term research direction of the HTES.
 
+This demostrates Learning Outcome **Professional Standard** to substantiate and validate future-oriented choices.
+
 ---
 
 ## Reflection
@@ -354,7 +357,7 @@ These areas have been discussed with Teade Punter who agreed that they align wit
 
 This project gave me broad hands-on experience on computer vision, perception pipelines and 3D data manipulation.
 
-On the technical side, I gained knowledge of stereo vision and depth cameras through the ZED SDK, object detection through YOLO and classical tracking methods through the design and tuning of a Kalman filter. I also got an introduction to world models for dynamic scene understanding through Depth Anything v3 and NVIDIA Cosmos. 
+On the technical side, I gained knowledge of stereo vision and depth cameras through the ZED SDK, object detection through YOLO and classical tracking methods through the design and tuning of a Kalman filter. I also got a theoretical introduction to world models for dynamic scene understanding through Depth Anything v3 and NVIDIA Cosmos. 
 
 Beyond these individual components, I learned how to integrate them into a single system, how to characterize and correct systematic camera detection inaccuracies and how to design an evaluation methodology for a perception and prediction pipeline.
 
@@ -362,13 +365,19 @@ On the infrastructure side, I gained experience with Docker for cross-platform d
 
 Beyond these technical skills, I further developed my systems thinking, multidisciplinary thinking and analytical thinking, as well as team work.
 
+This demostrates Learning Outcome **Professional Duties**. Example evidence: System Design Document.
+
 \vspace{\baselineskip}
 
 **Approach and methodology**
 
 I worked according to Scrum, in sprints of two to three weeks with a Git issue board and weekly meetings with stakeholders, which helped me improve the stakeholder feedback loop throughout the project.
 
-Additionally, I followed a research-implement-test cycle based on the engineering design process: defining the problem, researching and prototyping possible solutions, testing and evaluating them and refining the system before the next cycle. This gave me the structure for narrowing down design choices, such as choosing between RGB-D and point cloud representations or gradually improving the Kalman filter configuration. Thus, I worked in continuous cycles of design, prototyping and analysis  to refine both a solution and the understanding behind it.
+This demostrates Learning Outcome **Professional Standard**. Example evidence: Git Issue Board.
+
+Additionally, I followed a research-implement-test cycle based on the engineering design process: defining the problem, researching and prototyping possible solutions, testing and evaluating them and refining the system before the next cycle. This gave me the structure for narrowing down design choices, such as choosing between RGB-D and point cloud representations or gradually improving the Kalman filter configuration. Thus, I worked in continuous cycles of design, prototyping and analysis to refine both a solution and the understanding behind it, asking for feedback when needed. 
+
+This demostrates Learning Outcome **Situation-Orientation**. Example evidence: FeedPulse Checkpoints.
 
 \vspace{\baselineskip}
 
@@ -382,9 +391,13 @@ A major accomplishment was successfully working through a wide range of technica
 
 I delivered documentation that is detailed and coherent, keeping the work understandable and reproducible. I also maintained effective and ongoing communication with stakeholders, with regular meetings and progress updates that kept the work aligned with their needs and interests.
 
+This demostrates Learning Outcome **Professional Duties**. Example evidence: Kalman Filter Design and Tuning Document.
+
 - Risk management
 
 Risks identified in the project plan were managed successfully. Scope creep was avoided by defining a strict MVP, holding frequent feedback sessions with stakeholders and prioritizing experiments over open-ended research, for example by limiting the world-model investigation to a literature study rather than a full implementation. Technical complexity was managed by starting with a simple baseline Kalman filter and incrementally increasing complexity. Evaluation ambiguity was addressed by defining the detection accuracy and prediction performance metrics early in the project. Additionally, time constraints were managed by including buffer time and working in sprints with a Git issue board.
+
+This demostrates Learning Outcome **Personal Leadership**. Example evidence: Evaluation Metrics Document.
 
 \vspace{\baselineskip}
 
