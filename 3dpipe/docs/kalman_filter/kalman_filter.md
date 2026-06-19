@@ -143,8 +143,8 @@ $$K = \frac{P^-_k}{P^-_k + R}$$
 
 $K$ answers: how much should the camera measurement move the estimate?
 
-- $P^-_k \gg R$ (predicted uncertainty much greater than measurement noise): model uncertain, camera reliable $\Rightarrow$ $K \to 1$, camera trusted strongly.
-- $R \gg P^-_k$ (measurement noise much greater than predicted uncertainty): camera noisy, model confident $\Rightarrow$ $K \to 0$, camera mostly ignored.
+**- $P^-_k \gg R$ (predicted uncertainty much greater than measurement noise): model uncertain, camera reliable $\Rightarrow$ $K \to 1$, camera trusted strongly.
+- $R \gg P^-_k$ (measurement noise much greater than predicted uncertainty): camera noisy, model confident $\Rightarrow$ $K \to 0$, camera mostly ignored.**
 
 ### Step 4 - Update state
 
@@ -217,7 +217,7 @@ $$\mathbf{s} = \begin{bmatrix} x \\ y \\ z \\ v_x \\ v_y \\ v_z \end{bmatrix}$$
 - $(x, y, z)$ - position of the ball in the camera frame (meters)
 - $(v_x, v_y, v_z)$ - velocity of the ball along each axis (meters per second)
 
-Position is observed each frame via the ZED depth map. Velocity is never directly measured - it is inferred by the filter from the sequence of position measurements over time.
+Position is observed each frame via the ZED depth map. Velocity is never directly measured - there is no velocity sensor. Instead, the filter infers velocity from the pattern of position corrections over time. Each frame, the residual $\mathbf{y}_k$ (the difference between where the camera sees the ball and where the model predicted it) is distributed across all six state variables by the Kalman gain $\mathbf{K}$. The velocity rows of $\mathbf{K}$ convert position errors into velocity corrections: if the ball consistently appears ahead of the prediction, the filter increases its velocity estimate to close the gap.
 
 The camera coordinate frame used in this project:
 
@@ -225,15 +225,15 @@ The camera coordinate frame used in this project:
 - $y$: vertical (positive = down)
 - $z$: depth from the camera lens
 
-### Covariance matrix $\mathbf{P}$
+### Covariance matrix $P$
 
 In 1D, uncertainty was a single number $P$. With six state variables, uncertainty is a $6 \times 6$ matrix. The diagonal entries are the variances on each state variable, equivalent to the single $P$ from 1D:
 
-$$\mathbf{P} = \begin{bmatrix} P_{xx} & \cdots & \cdots & \cdots & \cdots & \cdots \\ \cdots & P_{yy} & \cdots & \cdots & \cdots & \cdots \\ \cdots & \cdots & P_{zz} & \cdots & \cdots & \cdots \\ \cdots & \cdots & \cdots & P_{v_x v_x} & \cdots & \cdots \\ \cdots & \cdots & \cdots & \cdots & P_{v_y v_y} & \cdots \\ \cdots & \cdots & \cdots & \cdots & \cdots & P_{v_z v_z} \end{bmatrix}$$
+$$\mathbf{P} = \begin{bmatrix} P_{xx} & P_{xy} & P_{xz} & P_{x v_x} & P_{x v_y} & P_{x v_z} \\ \cdots & P_{yy} & \cdots & \cdots & \cdots & \cdots \\ \cdots & \cdots & P_{zz} & \cdots & \cdots & \cdots \\ P_{v_x x} & \cdots & \cdots & P_{v_x v_x} & \cdots & \cdots \\ \cdots & \cdots & \cdots & \cdots & P_{v_y v_y} & \cdots \\ \cdots & \cdots & \cdots & \cdots & \cdots & P_{v_z v_z} \end{bmatrix}$$
 
-The off-diagonal entries represent correlations between variables. For example, $P_{x v_x}$ captures whether an error in the x position estimate tends to come with an error in the $v_x$ estimate. These are computed automatically by the filter and are not set manually.
+The matrix is called a covariance matrix because the off-diagonal entries are covariances - they measure how two different variables vary together. For example, $P_{x v_x}$ captures whether an error in the x position estimate tends to come with an error in the $v_x$ estimate. The matrix is symmetric, so $P_{x v_x} = P_{v_x x}$ - "x error tends to come with $v_x$ error" is the same relationship as "$v_x$ error tends to come with x error." These entries are computed automatically by the filter and are not set manually.
 
-**Large diagonal = uncertain. Small diagonal = confident.**
+**Large diagonal value = uncertain, small diagonal value = confident.** A large diagonal entry means the filter is uncertain about its own prediction, so it will trust the camera more for that variable (higher K). A small diagonal entry means the filter is confident in its prediction, so it will weight the camera less.
 
 ### Step 0 - Initialization
 
@@ -247,9 +247,21 @@ Initial uncertainty is set to the $6 \times 6$ identity matrix:
 
 $$\mathbf{P}_{0} = \mathbf{I}_{6 \times 6} = \begin{bmatrix} 1 & 0 & 0 & 0 & 0 & 0 \\ 0 & 1 & 0 & 0 & 0 & 0 \\ 0 & 0 & 1 & 0 & 0 & 0 \\ 0 & 0 & 0 & 1 & 0 & 0 \\ 0 & 0 & 0 & 0 & 1 & 0 \\ 0 & 0 & 0 & 0 & 0 & 1 \end{bmatrix}$$
 
-This expresses moderate, uniform uncertainty about all six variables. The exact value matters little - it is forgotten within a few frames as measurements arrive.
+This expresses moderate, uniform uncertainty about all six variables. The off-diagonal entries are zero because at initialization there is only one detection and no history of errors - the filter has no evidence that errors in different variables are correlated. After the first predict step, $\mathbf{F}$ couples position and velocity and the off-diagonals become nonzero. The exact values on the diagonal matter little - they are forgotten within a few frames as measurements arrive.
 
 ### Step 1 - Predict state
+
+**Transition matrix $\mathbf{F}$**
+
+$\mathbf{F}$ encodes the constant-velocity motion model: *new position = old position + velocity × time*. Velocity is assumed unchanged.
+
+$$\mathbf{F} = \begin{bmatrix} 1 & 0 & 0 & \Delta t & 0 & 0 \\ 0 & 1 & 0 & 0 & \Delta t & 0 \\ 0 & 0 & 1 & 0 & 0 & \Delta t \\ 0 & 0 & 0 & 1 & 0 & 0 \\ 0 & 0 & 0 & 0 & 1 & 0 \\ 0 & 0 & 0 & 0 & 0 & 1 \end{bmatrix}, \quad \Delta t = \tfrac{1}{30} \text{ s}$$
+
+The top-right $3 \times 3$ block (containing $\Delta t$) propagates velocity into position. The bottom-right $3 \times 3$ identity block carries velocity forward unchanged.
+
+\vspace{\baselineskip}
+
+**Prediction calculation**
 
 The predicted state is computed by multiplying the transition matrix $\mathbf{F}$ by the previous state:
 
@@ -261,17 +273,9 @@ $$\hat{\mathbf{s}}^-_{k} = \mathbf{F} \cdot \hat{\mathbf{s}}_{k-1}$$
 | $\mathbf{F}$ | transition matrix - encodes the constant-velocity motion model (6×6 matrix) |
 | $\hat{\mathbf{s}}_{k-1}$ | corrected state from the previous frame (6×1 vector) |
 
-#### Transition matrix $\mathbf{F}$
-
-$\mathbf{F}$ encodes the constant-velocity motion model: new position = old position + velocity × time. Velocity is assumed unchanged.
-
-$$\mathbf{F} = \begin{bmatrix} 1 & 0 & 0 & \Delta t & 0 & 0 \\ 0 & 1 & 0 & 0 & \Delta t & 0 \\ 0 & 0 & 1 & 0 & 0 & \Delta t \\ 0 & 0 & 0 & 1 & 0 & 0 \\ 0 & 0 & 0 & 0 & 1 & 0 \\ 0 & 0 & 0 & 0 & 0 & 1 \end{bmatrix}, \quad \Delta t = \tfrac{1}{30} \text{ s}$$
-
-The top-right $3 \times 3$ block (containing $\Delta t$) propagates velocity into position. The bottom-right $3 \times 3$ identity block carries velocity forward unchanged.
-
 Expanding $\mathbf{F} \cdot \hat{\mathbf{s}}_{k-1}$ shows what the model predicts:
 
-$$\hat{\mathbf{s}}^-_{k} = \begin{bmatrix} x + v_x \Delta t \\ y + v_y \Delta t \\ z + v_z \Delta t \\ v_x \\ v_y \\ v_z \end{bmatrix}$$
+$$\hat{\mathbf{s}}^-_{k} = \mathbf{F} \cdot \hat{\mathbf{s}}_{k-1} = \begin{bmatrix} 1 & 0 & 0 & \Delta t & 0 & 0 \\ 0 & 1 & 0 & 0 & \Delta t & 0 \\ 0 & 0 & 1 & 0 & 0 & \Delta t \\ 0 & 0 & 0 & 1 & 0 & 0 \\ 0 & 0 & 0 & 0 & 1 & 0 \\ 0 & 0 & 0 & 0 & 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} x \\ y \\ z \\ v_x \\ v_y \\ v_z \end{bmatrix} = \begin{bmatrix} x + v_x \Delta t \\ y + v_y \Delta t \\ z + v_z \Delta t \\ v_x \\ v_y \\ v_z \end{bmatrix}$$
 
 Each position advances by its corresponding velocity times the time step. Velocity is copied forward unchanged - this is the constant-velocity assumption.
 
@@ -289,15 +293,23 @@ $$\mathbf{P}^-_{k} = \mathbf{F} \cdot \mathbf{P}_{k-1} \cdot \mathbf{F}^\top + \
 | $\mathbf{F}^\top$ | transpose of $\mathbf{F}$ (6×6) |
 | $\mathbf{Q}$ | process noise matrix (6×6) |
 
+The $F P F^\top$ form is the standard rule for transforming a covariance through a linear model - a state transforms as $Fs$, but its covariance transforms as $F P F^\top$.
+
+\vspace{\baselineskip}
+
 **Why $\mathbf{F} \mathbf{P} \mathbf{F}^\top$ and not just $\mathbf{P} + \mathbf{Q}$?** The state variables are coupled - position advances using velocity. When $\mathbf{F}$ transforms the state, it also mixes the uncertainties of position and velocity together. The formula $\mathbf{F} \mathbf{P} \mathbf{F}^\top$ applies $\mathbf{F}$ from both sides to correctly propagate all six uncertainties and their cross-correlations forward. For the x axis specifically, this gives:
 
 $$P^-_{xx} = P_{xx} + 2\Delta t \cdot P_{x v_x} + \Delta t^2 \cdot P_{v_x v_x}$$
 
-The position uncertainty grows not just by $Q$ but also by $\Delta t^2 \cdot P_{v_x v_x}$ - the more uncertain the velocity estimate is, the faster position uncertainty inflates during predict.
+The position uncertainty grows not just by $Q$ but also by $\Delta t^2 \cdot P_{v_x v_x}$ - **the more uncertain the velocity estimate is, the faster position uncertainty inflates during predict.**
+
+\vspace{\baselineskip}
 
 **Why $+ \mathbf{Q}$?** $\mathbf{F} \mathbf{P} \mathbf{F}^\top$ only accounts for uncertainty already present from last frame. It does not account for the motion model being wrong. $\mathbf{Q}$ adds that missing uncertainty back in, preventing the filter from becoming overconfident in its own predictions.
 
-#### Process noise matrix $\mathbf{Q}$
+\vspace{\baselineskip}
+
+**Process noise matrix $\mathbf{Q}$**
 
 $$\mathbf{Q} = \begin{bmatrix} 0.0001 & 0 & 0 & 0 & 0 & 0 \\ 0 & 0.0001 & 0 & 0 & 0 & 0 \\ 0 & 0 & 0.0001 & 0 & 0 & 0 \\ 0 & 0 & 0 & q_v & 0 & 0 \\ 0 & 0 & 0 & 0 & q_v & 0 \\ 0 & 0 & 0 & 0 & 0 & q_v \end{bmatrix}$$
 
@@ -314,6 +326,12 @@ Velocity rows use $q_v$: velocity can change unexpectedly if the ball accelerate
 
 Both non-baseline values of $q_v$ produced equivalent prediction accuracy (mean ADE 1.3 cm, mean FDE 2.1 cm), each better than `baseline`. This suggests the constant-velocity model assumption itself was the main ceiling, not the choice of $q_v$.
 
+\vspace{\baselineskip}
+
+**Intuition**
+
+Predicting forward always makes the filter less certain. $\mathbf{F} \mathbf{P} \mathbf{F}^\top$ carries the old uncertainty forward and inflates position with any velocity error, while Q adds the uncertainty from the motion model being imperfect. Step 2 is the "uncertainty grows" half of the cycle, deliberately widening the estimate so the next measurement (Step 3) gets appropriate weight. The result is the calculated uncertainty $\mathbf{P}^-_{k}$ which is a $6 \times 3$ matrix.
+
 ---
 
 ### Step 3 - Kalman gain
@@ -326,7 +344,9 @@ $$\mathbf{K} = \mathbf{P}^-_{k} \cdot \mathbf{H}^\top \cdot \left( \mathbf{H} \c
 
 This is built in steps. First, the observation matrix $\mathbf{H}$ must be introduced.
 
-#### Observation matrix $\mathbf{H}$
+\vspace{\baselineskip}
+
+**Observation matrix $\mathbf{H}$**
 
 The camera measures position only - not velocity. The state vector has six variables but the measurement has only three. $\mathbf{H}$ is a $3 \times 6$ matrix that extracts the position rows from the full state:
 
@@ -338,13 +358,17 @@ $$\mathbf{H} \cdot \hat{\mathbf{s}}^-_{k} = \begin{bmatrix} \hat{x} \\ \hat{y} \
 
 This is the predicted position expressed in the same 3D space as the camera measurement, so the two can be compared directly.
 
-#### Building the Kalman gain step by step
+\vspace{\baselineskip}
+
+**Building the Kalman gain step by step**
 
 **Piece 1: $\mathbf{H} \cdot \mathbf{P}^-_{k}$**
 
 $\mathbf{H}$ is $3 \times 6$ and $\mathbf{P}^-_{k}$ is $6 \times 6$. Result is $3 \times 6$.
 
 This extracts only the rows of $\mathbf{P}^-_{k}$ that correspond to position - which parts of the total uncertainty are visible to the sensor.
+
+\vspace{\baselineskip}
 
 **Piece 2: $\mathbf{H} \cdot \mathbf{P}^-_{k} \cdot \mathbf{H}^\top$**
 
@@ -356,17 +380,27 @@ $$\mathbf{H} \cdot \mathbf{P}^-_{k} \cdot \mathbf{H}^\top = \begin{bmatrix} P_{x
 
 This is the prediction uncertainty expressed in the same 3D space as the measurement.
 
+**Intuition**
+
+Because the camera only measures position, the prediction uncertainty must be reduced from its full 6D form to the 3D position space before it can be compared with the measurement. $H P^-_k H^\top$ performs this projection, discarding the velocity-related uncertainty and leaving a 3x3 matrix that matches R in both dimension and units, so the two combine cleanly into S.
+
+\vspace{\baselineskip}
+
 **Piece 3: $\mathbf{S} = \mathbf{H} \cdot \mathbf{P}^-_{k} \cdot \mathbf{H}^\top + \mathbf{R}$**
 
-Add the measurement noise matrix $\mathbf{R}$ (also $3 \times 3$) to piece 2. Result is $3 \times 3$.
+Add the measurement noise matrix $\mathbf{R}$ (also $3 \times 3$) to piece 2 (see below what is $\mathbf{R}$). Result is $3 \times 3$.
 
 $$\mathbf{S} = \begin{bmatrix} P_{xx} + R_x & P_{xy} & P_{xz} \\ P_{yx} & P_{yy} + R_y & P_{yz} \\ P_{zx} & P_{zy} & P_{zz} + R_z \end{bmatrix}$$
 
 $\mathbf{S}$ is the innovation covariance - the total uncertainty in measurement space combining prediction uncertainty and sensor noise. This is the 6D equivalent of the denominator $P^-_k + R$ in the 1D gain formula.
 
+\vspace{\baselineskip}
+
 **Piece 4: $\mathbf{S}^{-1}$**
 
 Invert $\mathbf{S}$. If $\mathbf{S}$ is large (high total uncertainty), $\mathbf{S}^{-1}$ is small, producing a smaller gain - the correction is less aggressive when total uncertainty is high. This is the matrix equivalent of dividing by $P^-_k + R$ in the 1D case.
+
+\vspace{\baselineskip}
 
 **Piece 5: $\mathbf{P}^-_{k} \cdot \mathbf{H}^\top$**
 
@@ -378,7 +412,9 @@ This gives the first three columns of $\mathbf{P}^-_{k}$ - how each of the six s
 
 $$\mathbf{K} = \underbrace{\mathbf{P}^-_{k} \cdot \mathbf{H}^\top}_{6 \times 3} \cdot \underbrace{\mathbf{S}^{-1}}_{3 \times 3} = \underbrace{\mathbf{K}}_{6 \times 3}$$
 
-#### Measurement noise matrix $\mathbf{R}$
+\vspace{\baselineskip}
+
+**Measurement noise matrix $\mathbf{R}$**
 
 $\mathbf{R}$ is $3 \times 3$ and diagonal - measurement errors in $x$, $y$ and $z$ are assumed independent:
 
@@ -508,6 +544,50 @@ Predictions are only issued after `corrections >= 2` - ensuring at least one mea
 - **Ground truth from the same pipeline** - the evaluation ground truth is produced by the same YOLO and ZED pipeline that drives predictions. Systematic errors in detection or depth cancel between the prediction and the future ground truth frame. ADE and FDE likely underestimate true prediction error relative to real-world positions.
 - **ZED accuracy experiment coverage** - the static accuracy experiment was conducted at one height ($y = 0.28$ m) and depths up to 0.77 m. Biases at other heights or longer distances are not characterized.
 - **Bias not corrected** - the ZED shows a mean y error of $-5.0$ cm and a mean z error of $+4.1$ cm. These are stable and could be corrected with fixed offsets applied to $\mathbf{z}_{k}$ before the update step, but this was not applied in the pipeline.
+
+---
+
+## Configuration vs runtime variables
+
+This section separates the quantities that are **set once at initialization** (configuration) from those the filter **computes every frame** (runtime). A common misunderstanding is treating the Kalman gain $K$ as a tunable parameter - it is not. The only knobs are $Q$, $R$ and the initial state/uncertainty, everything else is derived.
+
+### Parameters set at initialization
+
+These are fixed before the loop starts and do not change during a run.
+
+| Parameter | Symbol | How it is set | Effect of changing it |
+| ------ | --- | ---------------- | ---------------- |
+| Process noise | $Q$ | Design choice. Position rows fixed at 0.0001 m$^2$. Velocity rows set via $q_v$ (0.01 or 0.10 in this project). | Larger $Q$ trusts the motion model less, so measurements get more weight via $K$. Raising $q_v$ lets velocity adapt faster to direction changes. |
+| Measurement noise | $R$ | Measured from the static ZED experiment ($R = \sigma^2$ per axis), or an arbitrary default in the baseline config. | Smaller $R$ trusts the camera more (higher $K$). Over-large $R$ over-trusts the model and lags real motion. |
+| Initial state | $s_0$ | First detection sets position; velocity initialized to zero. | Zero-velocity start causes a few frames of convergence before predictions are meaningful (hence predictions suppressed until corrections >= 2). |
+| Initial uncertainty | $P_0$ | Set to the 6x6 identity matrix $I$. | Exact values matter little - forgotten within a few frames. Must not be zero (zero = "perfectly certain", which makes the filter ignore all measurements). |
+| Transition matrix | $F$ | Built from $\Delta t = 1/30$ s and the constant-velocity model. | Fixed structure. Only changes if $\Delta t$ or the motion model changes. |
+| Observation matrix | $H$ | Fixed - extracts the three position rows from the state. | Constant; the camera always measures the same three position variables. |
+| Timestep | $\Delta t$ | Fixed at 1/30 s (30 fps). | Assumed constant. If real frame intervals jitter, $\Delta t$ and therefore $F$ would need to be recomputed per frame. |
+
+In this project, $F$, $H$, $Q$, $R$ and $\Delta t$ are treated as constant for the entire run. In a general Kalman filter they may be made time-varying (for example $\Delta t$ tracking actual inter-frame timing, or $R$ adapting with range), but that is out of scope here.
+
+### Variables that change every frame at runtime
+
+These are recomputed each cycle. They are outputs of the filter, not configuration.
+
+| Variable | Symbol | When it changes |
+| --- | --- | --- |
+| State estimate | $s$ / $\hat{s}^-_k$ | Predict step shifts it forward; update step corrects it toward the measurement. |
+| Covariance | $P$ / $P^-_k$ | Grows in the predict step (Step 2), shrinks in the update step (Step 5). |
+| Measurement | $z_k$ | New camera reading each frame (external input). |
+| Residual | $y_k$ | Difference between measurement and prediction - new each frame. |
+| Innovation covariance | $S$ | Derived from $P^-_k$ and $R$; recomputed each frame. |
+| Kalman gain | $K$ | Derived from $P^-_k$ and $S$; recomputed each frame from the current uncertainty. |
+
+### Key points
+
+1. **$K$ is derived, not tuned.** $Q$ and $R$ are the knobs. $K$ is computed every frame from the live uncertainty $P$ and the configured $R$. As $P$ changes, $K$ changes automatically.
+2. **$P$ evolves even without a measurement.** During coasting (no detection), $P$ keeps growing via the predict step with no update to shrink it, so the filter becomes progressively less confident. $K$, $y$ and $S$ are only recomputed when an update actually runs.
+3. **Mental model:**
+   - You configure: $F$, $H$, $Q$, $R$, $s_0$, $P_0$ (constant during the run).
+   - The filter computes: $s$, $P$, and from those $K$, $y$, $S$ (changing).
+   - The camera supplies: $z$ (changing, external input).
 
 ---
 
