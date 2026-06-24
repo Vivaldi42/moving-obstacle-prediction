@@ -23,22 +23,21 @@ except ImportError:
 SVO_PATHS = [
     "/datasets/Dataset_2/Clean/HD1080_one_ball_straight_line_21-34-15.svo2",
     "/datasets/Dataset_2/Clean/HD1080_one_ball_straight_line_21-32-13.svo2",
-    "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-29.svo2",
-    "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-44.svo2",
-    "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-05.svo2",
-    "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-18.svo2",
+    # "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-29.svo2",
+    # "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-44.svo2",
+    # "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-05.svo2",
+    # "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-18.svo2",
 ]
 OUTPUT_DIR = "/app/output"
 FPS = 30
 PREDICTION_HORIZON = 0.2
-PREDICTION_STEPS = round(PREDICTION_HORIZON * FPS)  # 6
+PREDICTION_STEPS = round(PREDICTION_HORIZON * FPS)
 MAX_MISSED = 5
 VISUALIZE = True
 
-# ZED per-axis variance from static analysis (std: X=0.8cm, Y=1.1cm, Z=0.8cm)
-_ZED_X = 0.008 ** 2   # 0.000064
-_ZED_Y = 0.011 ** 2   # 0.000121
-_ZED_Z = 0.008 ** 2   # 0.000064
+_ZED_X = 0.008 ** 2
+_ZED_Y = 0.011 ** 2
+_ZED_Z = 0.008 ** 2
 
 CONFIGS = [
     KFConfig(name="baseline",
@@ -56,23 +55,185 @@ CONFIGS = [
 ]
 
 
+class FrameVisualizer:
+    """Renders tracking and prediction overlays onto video frames."""
+
+    def __init__(self, output_path: str, intrinsics: tuple[float, float, float, float]):
+        self.output_path = output_path
+        self.fx, self.fy, self.cx, self.cy = intrinsics
+        self.trail: deque = deque()
+        self.pred_trail: deque = deque()
+        self._tmp_path = output_path + ".tmp.mp4"
+        self._writer = cv2.VideoWriter(
+            self._tmp_path,
+            cv2.VideoWriter.fourcc(*"mp4v"),
+            FPS,
+            (1920, 1080),
+        )
+
+    def draw_frame(
+        self,
+        frame_rgb: np.ndarray,
+        current_xyz: tuple[float, float, float] | None,
+        kf_label_xyz: tuple[float, float, float] | None,
+        pred_sequence: list[tuple[float, float, float]] | None,
+        detected: bool,
+    ) -> None:
+        frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
+
+        current_pixel = None
+        if current_xyz is not None:
+            current_pixel = project_to_pixel(
+                *current_xyz, self.fx, self.fy, self.cx, self.cy,
+            )
+
+        if current_pixel is not None:
+            self.trail.append(current_pixel)
+
+        self._draw_trail(frame_bgr)
+        self._draw_current(frame_bgr, current_pixel, kf_label_xyz, detected)
+        self._draw_prediction(frame_bgr, current_pixel, pred_sequence)
+        self._writer.write(frame_bgr)
+
+    def _draw_trail(self, frame_bgr: np.ndarray) -> None:
+        for i in range(1, len(self.trail)):
+            cv2.line(frame_bgr, self.trail[i - 1], self.trail[i], (0, 255, 0), 2)
+
+    def _draw_current(
+        self,
+        frame_bgr: np.ndarray,
+        pixel: tuple[int, int] | None,
+        label_xyz: tuple[float, float, float] | None,
+        detected: bool,
+    ) -> None:
+        if pixel is None:
+            return
+        color = (0, 255, 0) if detected else (0, 165, 255)
+        cv2.circle(frame_bgr, pixel, 15, color, 3)
+        if label_xyz is not None:
+            lx, ly, lz = label_xyz
+            cv2.putText(
+                frame_bgr, f"x:{lx:.2f} y:{ly:.2f} z:{lz:.2f}m",
+                (pixel[0] + 20, pixel[1]),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2,
+            )
+
+    def _draw_prediction(
+        self,
+        frame_bgr: np.ndarray,
+        current_pixel: tuple[int, int] | None,
+        pred_sequence: list[tuple[float, float, float]] | None,
+    ) -> None:
+        if pred_sequence is None:
+            return
+        px, py, pz = pred_sequence[-1]
+        pred_pixel = project_to_pixel(px, py, pz, self.fx, self.fy, self.cx, self.cy)
+        if pred_pixel is None:
+            return
+        self.pred_trail.append(pred_pixel)
+        for i in range(1, len(self.pred_trail)):
+            cv2.line(frame_bgr, self.pred_trail[i - 1], self.pred_trail[i], (0, 0, 255), 2)
+        cv2.circle(frame_bgr, pred_pixel, 15, (0, 0, 255), 3)
+        if current_pixel is not None:
+            cv2.line(frame_bgr, current_pixel, pred_pixel, (0, 0, 255), 2)
+        cv2.putText(
+            frame_bgr, f"x:{px:.2f} y:{py:.2f} z:{pz:.2f}m +{PREDICTION_HORIZON}s",
+            (pred_pixel[0] + 20, pred_pixel[1]),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2,
+        )
+
+    def release(self) -> None:
+        self._writer.release()
+        subprocess.run(
+            [
+                "ffmpeg", "-y", "-i", self._tmp_path,
+                "-vcodec", "libx264", "-pix_fmt", "yuv420p",
+                "-an", self.output_path,
+            ],
+            check=True,
+        )
+        os.remove(self._tmp_path)
+
+
+def _process_frame(
+    model, left_rgb: np.ndarray, xyz_map: np.ndarray,
+    kf: BallKalmanFilter, missed: int, corrections: int,
+) -> tuple[
+    tuple[float, float, float] | None,
+    tuple[float, float, float] | None,
+    int, int,
+]:
+    """Detect ball, update KF. Returns (smoothed_xyz, raw_xyz, missed, corrections)."""
+    if kf.initialized:
+        kf.predict()
+
+    bbox = detect_ball_bbox(model, left_rgb)
+    smoothed_xyz = None
+    raw_xyz = None
+
+    if bbox is not None:
+        raw_xyz = calc_ball_3d_position(xyz_map, *bbox)
+        if raw_xyz is not None:
+            x, y, z = raw_xyz
+            if not kf.initialized:
+                kf.reset(x, y, z)
+                kf.predict()
+            smoothed_xyz = kf.correct(x, y, z)
+            return smoothed_xyz, raw_xyz, 0, corrections + 1
+
+    return smoothed_xyz, raw_xyz, missed + 1, corrections
+
+
+def _kf_display_state(
+    kf: BallKalmanFilter, smoothed_xyz: tuple[float, float, float] | None, missed: int,
+) -> tuple[tuple[float, float, float] | None, tuple[float, float, float] | None]:
+    """Returns (current_xyz, label_xyz) for visualization from the KF state."""
+    if not kf.initialized:
+        return None, None
+
+    state_xyz = (
+        float(kf.kf.statePost[0, 0]),
+        float(kf.kf.statePost[1, 0]),
+        float(kf.kf.statePost[2, 0]),
+    )
+
+    if smoothed_xyz is not None:
+        return smoothed_xyz, state_xyz
+    if 0 < missed < MAX_MISSED:
+        return state_xyz, state_xyz
+    return None, state_xyz
+
+
+def _compute_metrics(
+    latencies: list[float], ram_samples: list[float],
+    frame_count: int, total_time: float,
+) -> dict:
+    lat = np.array(latencies)
+    return {
+        "latency_mean_ms": float(np.mean(lat)),
+        "latency_p95_ms": float(np.percentile(lat, 95)),
+        "latency_max_ms": float(np.max(lat)),
+        "throughput_fps": frame_count / total_time,
+        "ram_mean_mb": float(np.mean(ram_samples)),
+        "ram_peak_mb": float(np.max(ram_samples)),
+        "gpu_peak_mb": (
+            torch.cuda.max_memory_allocated() / 1e6 if _TORCH_CUDA else None  # type: ignore[possibly-undefined]
+        ),
+    }
+
+
 def run_pipeline(
     svo_path: str,
     model,
     config: KFConfig | None = None,
-    visualize: bool = False,
-    output_path: str | None = None,
+    visualizer: FrameVisualizer | None = None,
 ) -> tuple[dict, dict, dict]:
     """Run the full pipeline on one SVO file.
 
-    Returns:
-        ground_truth  - {frame_idx: (x, y, z)}
-        predictions   - {frame_idx: [(px, py, pz), ...]} with PREDICTION_STEPS entries per frame
-        metrics       - latency, throughput, RAM, GPU memory
+    Returns (ground_truth, predictions, metrics).
     """
     cam = open_svo(svo_path)
-    mat_rgb = sl.Mat()
-    mat_xyz = sl.Mat()
+    mat_rgb, mat_xyz = sl.Mat(), sl.Mat()
     kf = BallKalmanFilter(dt=1 / FPS, config=config)
 
     ground_truth: dict = {}
@@ -81,197 +242,56 @@ def run_pipeline(
     missed = 0
     corrections = 0
 
-    fx = fy = cx_cam = cy_cam = 0.0
-    trail: deque = deque()
-    pred_trail: deque = deque()
-    pred_buffer: dict = {}
-    writer: cv2.VideoWriter | None = None
-    tmp_path: str = ""
-
     latencies: list[float] = []
     process = psutil.Process()
     ram_samples: list[float] = []
 
     if _TORCH_CUDA:
-        torch.cuda.reset_peak_memory_stats()
+        torch.cuda.reset_peak_memory_stats()  # type: ignore[possibly-undefined]
 
-    if visualize:
-        assert output_path is not None
-        fx, fy, cx_cam, cy_cam = get_intrinsics(cam)
-        tmp_path = output_path + ".tmp.mp4"
-        writer = cv2.VideoWriter(
-            tmp_path,
-            cv2.VideoWriter.fourcc(*"mp4v"),
-            FPS,
-            (1920, 1080),
-        )
-
-    t_pipeline_start = time.perf_counter()
+    t_start = time.perf_counter()
 
     while True:
         result = grab_frame(cam, mat_rgb, mat_xyz)
         if result is None:
             break
 
-        # Latency: from frame received to prediction output
-        t_frame_start = time.perf_counter()
-
+        t_frame = time.perf_counter()
         left_rgb, xyz_map = result
 
-        if kf.initialized:
-            kf.predict()
+        smoothed_xyz, raw_xyz, missed, corrections = _process_frame(
+            model, left_rgb, xyz_map, kf, missed, corrections,
+        )
+        if raw_xyz is not None:
+            ground_truth[frame_idx] = raw_xyz
 
-        detected_ball_bbox = detect_ball_bbox(model, left_rgb)
-        smoothed_xyz: tuple[float, float, float] | None = None
-
-        if detected_ball_bbox is not None:
-            x1, y1, x2, y2 = detected_ball_bbox
-            ball_position_xyz = calc_ball_3d_position(xyz_map, x1, y1, x2, y2)
-            if ball_position_xyz is not None:
-                x, y, z = ball_position_xyz
-                if not kf.initialized:
-                    kf.reset(x, y, z)
-                    kf.predict()
-                smoothed_xyz = kf.correct(x, y, z)
-                ground_truth[frame_idx] = ball_position_xyz
-                missed = 0
-                corrections += 1
-        else:
-            missed += 1
-
-        pred_sequence: list[tuple[float, float, float]] | None = None
+        pred_sequence = None
         if corrections >= 2 and missed < MAX_MISSED:
-            pred_sequence = [
-                kf.predict_ahead(s / FPS)
-                for s in range(1, PREDICTION_STEPS + 1)
-            ]
+            pred_sequence = [kf.predict_ahead(s / FPS) for s in range(1, PREDICTION_STEPS + 1)]
             predictions[frame_idx] = pred_sequence
 
-        latencies.append((time.perf_counter() - t_frame_start) * 1000)
+        latencies.append((time.perf_counter() - t_frame) * 1000)
         ram_samples.append(process.memory_info().rss / 1e6)
 
-        if visualize:
-            assert writer is not None
-            frame_bgr = cv2.cvtColor(left_rgb, cv2.COLOR_RGB2BGR)
-            current_pixel: tuple[int, int] | None = None
-            pred_xyz = pred_sequence[-1] if pred_sequence is not None else None
-
-            if smoothed_xyz is not None:
-                sx, sy, sz = smoothed_xyz
-                current_pixel = project_to_pixel(sx, sy, sz, fx, fy, cx_cam, cy_cam)
-            elif kf.initialized and missed > 0 and missed < MAX_MISSED:
-                cpx, cpy, cpz = kf.predict()
-                current_pixel = project_to_pixel(cpx, cpy, cpz, fx, fy, cx_cam, cy_cam)
-
-            if current_pixel is not None:
-                trail.append(current_pixel)
-
-            for i in range(1, len(trail)):
-                cv2.line(frame_bgr, trail[i - 1], trail[i], (0, 255, 0), 2)
-
-            if current_pixel is not None:
-                color = (0, 255, 0) if missed == 0 else (0, 165, 255)
-                cv2.circle(frame_bgr, current_pixel, 15, color, 3)
-                if kf.initialized:
-                    cx, cy, cz = (
-                        float(kf.kf.statePost[0, 0]),
-                        float(kf.kf.statePost[1, 0]),
-                        float(kf.kf.statePost[2, 0]),
-                    )
-                    label = f"x:{cx:.2f} y:{cy:.2f} z:{cz:.2f}m"
-                    cv2.putText(
-                        frame_bgr, label,
-                        (current_pixel[0] + 20, current_pixel[1]),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2,
-                    )
-
-            if pred_xyz is not None:
-                px, py, pz = pred_xyz
-                pred_buffer[frame_idx + PREDICTION_STEPS] = pred_xyz
-                pred_pixel = project_to_pixel(px, py, pz, fx, fy, cx_cam, cy_cam)
-                if pred_pixel is not None:
-                    pred_trail.append(pred_pixel)
-                    for i in range(1, len(pred_trail)):
-                        cv2.line(frame_bgr, pred_trail[i - 1], pred_trail[i], (0, 0, 255), 2)
-                    cv2.circle(frame_bgr, pred_pixel, 15, (0, 0, 255), 3)
-                    if current_pixel is not None:
-                        cv2.line(frame_bgr, current_pixel, pred_pixel, (0, 0, 255), 2)
-                    pred_label = f"x:{px:.2f} y:{py:.2f} z:{pz:.2f}m +{PREDICTION_HORIZON}s"
-                    cv2.putText(
-                        frame_bgr, pred_label,
-                        (pred_pixel[0] + 20, pred_pixel[1]),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2,
-                    )
-
-            if frame_idx in pred_buffer and kf.initialized and current_pixel is not None:
-                epx, epy, epz = pred_buffer.pop(frame_idx)
-                ax = float(kf.kf.statePost[0, 0])
-                ay = float(kf.kf.statePost[1, 0])
-                az = float(kf.kf.statePost[2, 0])
-                error = float(np.linalg.norm([epx - ax, epy - ay, epz - az]))
-
-                if error < 0.02:
-                    acc_color = (0, 255, 0)
-                elif error < 0.06:
-                    acc_color = (0, 255, 255)
-                else:
-                    acc_color = (0, 0, 255)
-
-                cv2.circle(frame_bgr, current_pixel, 25, acc_color, 4)
-                cv2.putText(
-                    frame_bgr, f"err:{error * 100:.1f}cm",
-                    (current_pixel[0] + 20, current_pixel[1] - 20),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, acc_color, 2,
-                )
-
-            writer.write(frame_bgr)
+        if visualizer is not None:
+            current_xyz, label_xyz = _kf_display_state(kf, smoothed_xyz, missed)
+            visualizer.draw_frame(left_rgb, current_xyz, label_xyz, pred_sequence, detected=(missed == 0))
 
         frame_idx += 1
 
-    t_pipeline_total = time.perf_counter() - t_pipeline_start
-
-    if visualize:
-        assert writer is not None
-        assert output_path is not None
-        writer.release()
-        subprocess.run(
-            [
-                "ffmpeg", "-y", "-i", tmp_path,
-                "-vcodec", "libx264", "-pix_fmt", "yuv420p",
-                "-an", output_path,
-            ],
-            check=True,
-        )
-        os.remove(tmp_path)
-
+    total_time = time.perf_counter() - t_start
+    if visualizer is not None:
+        visualizer.release()
     cam.close()
 
-    lat = np.array(latencies)
-    metrics = {
-        "latency_mean_ms": float(np.mean(lat)),
-        "latency_p95_ms": float(np.percentile(lat, 95)),
-        "latency_max_ms": float(np.max(lat)),
-        "throughput_fps": frame_idx / t_pipeline_total,
-        "ram_mean_mb": float(np.mean(ram_samples)),
-        "ram_peak_mb": float(np.max(ram_samples)),
-        "gpu_peak_mb": (
-            torch.cuda.max_memory_allocated() / 1e6 if _TORCH_CUDA else None
-        ),
-    }
-
-    return ground_truth, predictions, metrics
+    return ground_truth, predictions, _compute_metrics(latencies, ram_samples, frame_idx, total_time)
 
 
 def compute_ade_fde(
     gt: dict,
     predictions: dict,
 ) -> tuple[list[int], list[float], list[float]]:
-    """Compute ADE and FDE per prediction frame.
-
-    ADE = mean Euclidean error across all PREDICTION_STEPS steps.
-    FDE = Euclidean error at the final step only.
-    Frames where any future GT position is missing are skipped.
-    """
+    """ADE = mean error across all steps. FDE = error at the final step."""
     frames, ade_list, fde_list = [], [], []
     for frame_idx, pred_sequence in predictions.items():
         step_errors = []
@@ -290,17 +310,62 @@ def compute_ade_fde(
     return frames, ade_list, fde_list
 
 
+def print_summary_table(sweep_results: list[dict], n_seqs: int) -> None:
+    col = 22
+    header = (f"{'Config':<{col}} {'n':>5} {'ADE mean':>9} {'FDE mean':>9} "
+              f"{'ADE max':>9} {'FDE max':>9} {'Lat p95':>9} {'FPS':>6}")
+    print(f"\n{'='*len(header)}")
+    print(f"  {n_seqs} sequence(s) - overall summary")
+    print(f"{'='*len(header)}")
+    print(header)
+    print("-" * len(header))
+    for r in sweep_results:
+        ade, fde = r["ade_all"], r["fde_all"]
+        print(f"{r['config'].name:<{col}} {len(ade):>5} "
+              f"{np.mean(ade):>8.3f}m {np.mean(fde):>8.3f}m "
+              f"{np.max(ade):>8.3f}m {np.max(fde):>8.3f}m "
+              f"{r['lat_p95']:>8.1f}ms {r['fps']:>5.1f}")
+
+
+def write_results_csv(per_seq_rows: list[dict], path: str) -> None:
+    with open(path, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(list(per_seq_rows[0].keys()))
+        for row in per_seq_rows:
+            w.writerow(list(row.values()))
+
+
+def save_ade_fde_plot(sweep_results: list[dict], n_seqs: int, path: str) -> None:
+    config_names = [r["config"].name for r in sweep_results]
+    mean_ades = [np.mean(r["ade_all"]) for r in sweep_results]
+    mean_fdes = [np.mean(r["fde_all"]) for r in sweep_results]
+
+    x = np.arange(len(config_names))
+    _, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+    axes[0].bar(x, mean_ades, color="steelblue")
+    axes[0].set_xticks(x)
+    axes[0].set_xticklabels(config_names, rotation=15, ha="right")
+    axes[0].set_ylabel("ADE (m)")
+    axes[0].set_title(f"Mean ADE across {n_seqs} sequence(s)")
+
+    axes[1].bar(x, mean_fdes, color="darkorange")
+    axes[1].set_xticks(x)
+    axes[1].set_xticklabels(config_names, rotation=15, ha="right")
+    axes[1].set_ylabel("FDE (m)")
+    axes[1].set_title(f"Mean FDE across {n_seqs} sequence(s)")
+
+    plt.tight_layout()
+    plt.savefig(path)
+    plt.close()
+
+
 if __name__ == "__main__":
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     model = load_model("yolov8x.pt")
 
-    # seq_name: just the filename without extension, used for labelling
     seq_names = [os.path.splitext(os.path.basename(p))[0] for p in SVO_PATHS]
-
-    # per_seq_rows: one entry per (config, sequence) for the detailed CSV
     per_seq_rows: list[dict] = []
-
-    # sweep_results: one entry per config, holding aggregated stats across all sequences
     sweep_results: list[dict] = []
 
     for cfg in CONFIGS:
@@ -311,7 +376,7 @@ if __name__ == "__main__":
 
         for svo_path, seq_name in zip(SVO_PATHS, seq_names):
             print(f"Running: {cfg.name}  |  {seq_name} ...")
-            gt, preds, metrics = run_pipeline(svo_path, model, config=cfg, visualize=False)
+            gt, preds, metrics = run_pipeline(svo_path, model, config=cfg)
             frames, ade_list, fde_list = compute_ade_fde(gt, preds)
 
             cfg_ade_all.extend(ade_list)
@@ -343,71 +408,15 @@ if __name__ == "__main__":
             "fps":       float(np.mean(cfg_fps)),
         })
 
-    # --- Comparison table (aggregated across all sequences) ---
-    col = 22
-    n_seqs = len(SVO_PATHS)
-    header = (f"{'Config':<{col}} {'n':>5} {'ADE mean':>9} {'FDE mean':>9} "
-              f"{'ADE max':>9} {'FDE max':>9} {'Lat p95':>9} {'FPS':>6}")
-    print(f"\n{'='*len(header)}")
-    print(f"  {n_seqs} sequence(s) - overall summary")
-    print(f"{'='*len(header)}")
-    print(header)
-    print("-" * len(header))
-    for r in sweep_results:
-        ade, fde = r["ade_all"], r["fde_all"]
-        print(f"{r['config'].name:<{col}} {len(ade):>5} "
-              f"{np.mean(ade):>8.3f}m {np.mean(fde):>8.3f}m "
-              f"{np.max(ade):>8.3f}m {np.max(fde):>8.3f}m "
-              f"{r['lat_p95']:>8.1f}ms {r['fps']:>5.1f}")
+    print_summary_table(sweep_results, len(SVO_PATHS))
+    write_results_csv(per_seq_rows, f"{OUTPUT_DIR}/sweep_results.csv")
+    save_ade_fde_plot(sweep_results, len(SVO_PATHS), f"{OUTPUT_DIR}/ade_fde_plot.png")
 
-    # --- Per-sequence detail table ---
-    if n_seqs > 1:
-        print(f"\n--- Per-sequence detail ---")
-        seq_col = max(len(s) for s in seq_names) + 2
-        for r in per_seq_rows:
-            ade = r["mean_ade_m"] or 0
-            fde = r["mean_fde_m"] or 0
-            print(f"  {r['config']:<{col}} {r['sequence']:<{seq_col}} "
-                  f"ADE {ade:.3f}m  FDE {fde:.3f}m")
-
-    # --- Detailed CSV (one row per config × sequence) ---
-    with open(f"{OUTPUT_DIR}/sweep_results.csv", "w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(list(per_seq_rows[0].keys()))
-        for row in per_seq_rows:
-            w.writerow(list(row.values()))
-
-    # --- ADE / FDE comparison plot (means across all sequences) ---
-    config_names = [r["config"].name for r in sweep_results]
-    mean_ades = [np.mean(r["ade_all"]) for r in sweep_results]
-    mean_fdes = [np.mean(r["fde_all"]) for r in sweep_results]
-
-    x = np.arange(len(config_names))
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-
-    axes[0].bar(x, mean_ades, color="steelblue")
-    axes[0].set_xticks(x)
-    axes[0].set_xticklabels(config_names, rotation=15, ha="right")
-    axes[0].set_ylabel("ADE (m)")
-    axes[0].set_title(f"Mean ADE across {n_seqs} sequence(s)")
-
-    axes[1].bar(x, mean_fdes, color="darkorange")
-    axes[1].set_xticks(x)
-    axes[1].set_xticklabels(config_names, rotation=15, ha="right")
-    axes[1].set_ylabel("FDE (m)")
-    axes[1].set_title(f"Mean FDE across {n_seqs} sequence(s)")
-
-    plt.tight_layout()
-    plt.savefig(f"{OUTPUT_DIR}/ade_fde_plot.png")
-    plt.close()
-
-    # --- Visualise best config on first sequence ---
     if VISUALIZE:
         best = min(sweep_results, key=lambda r: np.mean(r["fde_all"]))
         print(f"\nVisualising best config ({best['config'].name}) on: {seq_names[0]}")
-        run_pipeline(
-            SVO_PATHS[0], model,
-            config=best["config"],
-            visualize=True,
-            output_path=f"{OUTPUT_DIR}/output.mp4",
+        vis = FrameVisualizer(
+            f"{OUTPUT_DIR}/output.mp4",
+            intrinsics=get_intrinsics(open_svo(SVO_PATHS[0])),
         )
+        run_pipeline(SVO_PATHS[0], model, config=best["config"], visualizer=vis)
