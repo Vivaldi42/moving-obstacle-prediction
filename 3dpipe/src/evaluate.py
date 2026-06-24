@@ -24,14 +24,9 @@ SVO_PATHS = [
     "/datasets/Dataset_2/Clean/HD1080_one_ball_straight_line_21-34-15.svo2",
     "/datasets/Dataset_2/Clean/HD1080_one_ball_straight_line_21-32-13.svo2",
     "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-29.svo2",
-    # "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-29.svo2",
     "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-44.svo2",
     "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-05.svo2",
     "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-18.svo2",
-    # "/datasets/Dataset_2/Clean/HD1080_ball_behind_box_21-40-04.svo2",
-    # "/datasets/Dataset_2/Clean/HD1080_ball_roll_21-53-17.svo2",
-    # "/datasets/Dataset_2/Clean/HD1080_ball_up_a_ramp_21-46-08.svo2",
-    # "/datasets/Dataset_2/Clean/HD1080_ball_up_a_ramp_and_back_21-45-51.svo2",
 ]
 OUTPUT_DIR = "/app/output"
 FPS = 30
@@ -280,12 +275,12 @@ def compute_ade_fde(
     frames, ade_list, fde_list = [], [], []
     for frame_idx, pred_sequence in predictions.items():
         step_errors = []
-        for step, (px, py, pz) in enumerate(pred_sequence, 1):
+        for step, (p_x, p_y, p_z) in enumerate(pred_sequence, 1):
             gt_xyz = gt.get(frame_idx + step)
             if gt_xyz is None:
                 break
-            gx, gy, gz = gt_xyz
-            step_errors.append(float(np.linalg.norm([px - gx, py - gy, pz - gz])))
+            gt_x, gt_y, gt_z = gt_xyz
+            step_errors.append(float(np.linalg.norm([p_x - gt_x, p_y - gt_y, p_z - gt_z])))
 
         if len(step_errors) == len(pred_sequence):
             frames.append(frame_idx)

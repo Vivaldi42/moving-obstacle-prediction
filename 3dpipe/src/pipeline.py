@@ -78,7 +78,7 @@ def calc_ball_3d_position(
     #   2. Keep only those within front_tolerance_m of the minimum depth (the front face).
     #   3. Use their pixel centroid as (u, v) and median Z as depth.
     #   This corrects for floor/surface occlusion of the object's bottom, which shifts
-    #   the naive bbox-center upward and gives a wrong Y reading.
+    #   the naive bbox-center upward and could give a wrong Y reading.
     #   Returns None if fewer than min_valid_points finite points exist in the bbox.
     h, w = xyz_map.shape[:2]
     bbox_patch = xyz_map[
@@ -172,7 +172,7 @@ class BallKalmanFilter:
             [0, 0, 0, 0,  0,  1 ],
         ], dtype=np.float32)
 
-        # Only x, y, z are measured, they are extracted them from the 6-value state.
+        # Observation matrix H. Only x, y, z are measured, they are extracted from the 6-value state.
         self.kf.measurementMatrix = np.array([
             [1, 0, 0, 0, 0, 0],
             [0, 1, 0, 0, 0, 0],
