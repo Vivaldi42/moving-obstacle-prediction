@@ -16,7 +16,6 @@ from visualizer import FrameVisualizer
 
 SVO_PATHS = [
     "/datasets/Dataset_2/Clean/HD1080_one_ball_straight_line_21-34-15.svo2",
-    # "/datasets/Dataset_2/Clean/HD1080_one_ball_straight_line_21-32-13.svo2",
     "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-29.svo2",
     "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-44.svo2",
     "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-05.svo2",
@@ -35,10 +34,11 @@ _ZED_Y = 0.011 ** 2
 _ZED_Z = 0.008 ** 2
 
 CONFIGS = [
-    KFConfig(name=f"vpn_{vpn}",
-             velocity_process_noise=vpn,
+    KFConfig(name=f"ppn_{ppn}",
+             velocity_process_noise=0.02,
+             position_process_noise=ppn,
              measurement_noise_x=_ZED_X, measurement_noise_y=_ZED_Y, measurement_noise_z=_ZED_Z)
-    for vpn in [0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5]
+    for ppn in [1e-5, 5e-5, 1e-4, 5e-4, 1e-3, 5e-3]
 ]
 
 
