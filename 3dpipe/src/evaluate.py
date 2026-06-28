@@ -7,6 +7,7 @@ from pipeline import (
     open_svo, get_intrinsics, grab_frame,
     load_model, detect_ball_bbox, calc_ball_3d_position,
     BallKalmanFilter, KFConfig,
+    BallKalmanFilterCA, KFConfigCA,
 )
 from metrics import (
     reset_gpu_stats, compute_frame_metrics, compute_ade_fde,
@@ -20,6 +21,11 @@ SVO_PATHS = [
     "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-44.svo2",
     "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-05.svo2",
     "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-18.svo2",
+    "/datasets/Dataset_2/Clean/HD1080_ball_behind_box_21-40-04.svo2",
+    "/datasets/Dataset_2/Clean/HD1080_ball_up_a_ramp_21-46-08.svo2",
+    "/datasets/Dataset_2/Clean/HD1080_ball_up_a_ramp_and_back_21-45-51.svo2",
+    "/datasets/Dataset_2/Clean/HD1080_bouncing_ball_21-41-37.svo2",
+    "/datasets/Dataset_2/Clean/HD1080_bouncing_ball_hit_window_21-42-41.svo2",
 ]
 OUTPUT_DIR = "/app/output"
 FPS = 30
@@ -27,17 +33,24 @@ PREDICTION_HORIZON = 0.2
 PREDICTION_STEPS = round(PREDICTION_HORIZON * FPS)
 MAX_MISSED = 5
 VISUALIZE = True
-PHASE = 3
+PHASE = 4
 
 _ZED_X = 0.008 ** 2
 _ZED_Y = 0.011 ** 2
 _ZED_Z = 0.008 ** 2
 
 CONFIGS = [
-    KFConfig(name="optimized_cv",
+    KFConfig(name="cv_optimized",
              velocity_process_noise=0.02,
              position_process_noise=0.0001,
              measurement_noise_x=_ZED_X, measurement_noise_y=_ZED_Y, measurement_noise_z=_ZED_Z),
+] + [
+    KFConfigCA(name=f"ca_apn_{apn}",
+               velocity_process_noise=0.02,
+               position_process_noise=0.0001,
+               acceleration_process_noise=apn,
+               measurement_noise_x=_ZED_X, measurement_noise_y=_ZED_Y, measurement_noise_z=_ZED_Z)
+    for apn in [0.01, 0.05, 0.1, 0.5, 1.0]
 ]
 
 
@@ -67,7 +80,10 @@ def run_pipeline(svo_path, yolo_model, config=None, visualizer=None):
     """Run the full pipeline on one SVO file. Returns (ground_truth, predictions, metrics)."""
     cam = open_svo(svo_path)
     mat_rgb, mat_xyz = sl.Mat(), sl.Mat()
-    kf = BallKalmanFilter(dt=1 / FPS, config=config)
+    if isinstance(config, KFConfigCA):
+        kf = BallKalmanFilterCA(dt=1 / FPS, config=config)
+    else:
+        kf = BallKalmanFilter(dt=1 / FPS, config=config)
 
     ground_truth, predictions = {}, {}
     frame_index = missed = corrections = 0
@@ -139,8 +155,10 @@ if __name__ == "__main__":
 
             per_seq_rows.append({
                 "config":               cfg.name,
+                "model":                "CA" if isinstance(cfg, KFConfigCA) else "CV",
                 "velocity_process_noise": cfg.velocity_process_noise,
                 "position_process_noise": cfg.position_process_noise,
+                "acceleration_process_noise": cfg.acceleration_process_noise if isinstance(cfg, KFConfigCA) else None,
                 "measurement_noise_x":    cfg.measurement_noise_x,
                 "measurement_noise_y":    cfg.measurement_noise_y,
                 "measurement_noise_z":    cfg.measurement_noise_z,
