@@ -15,7 +15,7 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - zed-resources-x86:/usr/local/zed/resources
     command: >
-      bash -lc "${PYTHON_COMMAND:-python src/pipeline.py}"
+      bash -lc "${PYTHON_COMMAND:-python src/evaluate.py}"
     deploy:
       resources:
         reservations:
@@ -38,7 +38,7 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - zed-resources-jetson:/usr/local/zed/resources
     command: >
-      bash -lc "${PYTHON_COMMAND:-python src/pipeline.py}"
+      bash -lc "${PYTHON_COMMAND:-python src/evaluate.py}"
     deploy:
       resources:
         reservations:
