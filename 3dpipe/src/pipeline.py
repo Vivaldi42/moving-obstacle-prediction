@@ -12,12 +12,12 @@ class KFConfig:
     name: str
     # How much the filter allows velocity to change per frame.
     # Higher = adapts faster to acceleration, lower = smoother but lags on speed changes.
-    vel_process_noise: float = 0.01
+    velocity_process_noise: float = 0.01
     # Camera measurement noise per axis (variance in m²).
     # From ZED static analysis: X std=0.8cm, Y std=1.1cm, Z std=0.8cm.
-    meas_noise_x: float = 0.001
-    meas_noise_y: float = 0.001
-    meas_noise_z: float = 0.001
+    measurement_noise_x: float = 0.001
+    measurement_noise_y: float = 0.001
+    measurement_noise_z: float = 0.001
 
 
 def open_svo(path: str) -> sl.Camera:
@@ -179,13 +179,13 @@ class BallKalmanFilter:
             [0, 0, 1, 0, 0, 0],
         ], dtype=np.float32)
 
-        vpn = config.vel_process_noise
+        vpn = config.velocity_process_noise
         self.kf.processNoiseCov = np.diag(
             [0.0001, 0.0001, 0.0001, vpn, vpn, vpn]
         ).astype(np.float32)
 
         self.kf.measurementNoiseCov = np.diag(
-            [config.meas_noise_x, config.meas_noise_y, config.meas_noise_z]
+            [config.measurement_noise_x, config.measurement_noise_y, config.measurement_noise_z]
         ).astype(np.float32)
 
         # errorCovPost is the uncertainty matrix. Setting it to identity (1s on diagonal)
@@ -212,12 +212,17 @@ class BallKalmanFilter:
         state = self.kf.correct(measurement)
         return float(state[0, 0]), float(state[1, 0]), float(state[2, 0])
 
+    def get_position(self) -> tuple[float, float, float]:
+        return (
+            float(self.kf.statePost[0, 0]),
+            float(self.kf.statePost[1, 0]),
+            float(self.kf.statePost[2, 0]),
+        )
+
     def predict_ahead(self, t: float) -> tuple[float, float, float]:
         # Linear extrapolation: where will the ball be in t seconds?
         # Uses current position and velocity from the filter state.
-        x = float(self.kf.statePost[0, 0])
-        y = float(self.kf.statePost[1, 0])
-        z = float(self.kf.statePost[2, 0])
+        x, y, z = self.get_position()
         vx = float(self.kf.statePost[3, 0])
         vy = float(self.kf.statePost[4, 0])
         vz = float(self.kf.statePost[5, 0])
