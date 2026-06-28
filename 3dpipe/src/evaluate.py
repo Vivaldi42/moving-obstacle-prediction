@@ -16,11 +16,11 @@ from visualizer import FrameVisualizer
 
 SVO_PATHS = [
     "/datasets/Dataset_2/Clean/HD1080_one_ball_straight_line_21-34-15.svo2",
-    "/datasets/Dataset_2/Clean/HD1080_one_ball_straight_line_21-32-13.svo2",
-    # "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-29.svo2",
-    # "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-44.svo2",
-    # "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-05.svo2",
-    # "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-18.svo2",
+    # "/datasets/Dataset_2/Clean/HD1080_one_ball_straight_line_21-32-13.svo2",
+    "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-29.svo2",
+    "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-44.svo2",
+    "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-05.svo2",
+    "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-18.svo2",
 ]
 OUTPUT_DIR = "/app/output"
 FPS = 30
@@ -28,24 +28,17 @@ PREDICTION_HORIZON = 0.2
 PREDICTION_STEPS = round(PREDICTION_HORIZON * FPS)
 MAX_MISSED = 5
 VISUALIZE = True
+PHASE = 2
 
 _ZED_X = 0.008 ** 2
 _ZED_Y = 0.011 ** 2
 _ZED_Z = 0.008 ** 2
 
 CONFIGS = [
-    KFConfig(name="baseline",
-             velocity_process_noise=0.01,
-             measurement_noise_x=0.001, measurement_noise_y=0.001, measurement_noise_z=0.001),
-    KFConfig(name="zed_noise",
-             velocity_process_noise=0.01,
-             measurement_noise_x=_ZED_X, measurement_noise_y=_ZED_Y, measurement_noise_z=_ZED_Z),
-    KFConfig(name="high_vel",
-             velocity_process_noise=0.1,
-             measurement_noise_x=0.001, measurement_noise_y=0.001, measurement_noise_z=0.001),
-    KFConfig(name="zed_noise_high_vel",
-             velocity_process_noise=0.1,
-             measurement_noise_x=_ZED_X, measurement_noise_y=_ZED_Y, measurement_noise_z=_ZED_Z),
+    KFConfig(name=f"vpn_{vpn}",
+             velocity_process_noise=vpn,
+             measurement_noise_x=_ZED_X, measurement_noise_y=_ZED_Y, measurement_noise_z=_ZED_Z)
+    for vpn in [0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5]
 ]
 
 
@@ -146,7 +139,12 @@ if __name__ == "__main__":
             cfg_fps.append(metrics["throughput_fps"])
 
             per_seq_rows.append({
-                "config":          cfg.name,
+                "config":               cfg.name,
+                "velocity_process_noise": cfg.velocity_process_noise,
+                "position_process_noise": cfg.position_process_noise,
+                "measurement_noise_x":    cfg.measurement_noise_x,
+                "measurement_noise_y":    cfg.measurement_noise_y,
+                "measurement_noise_z":    cfg.measurement_noise_z,
                 "sequence":        seq_name,
                 "n":               len(frames),
                 "mean_ade_m":      round(float(np.mean(ade_list)), 4) if ade_list else None,
@@ -170,14 +168,16 @@ if __name__ == "__main__":
         })
 
     print_summary_table(sweep_results, len(SVO_PATHS))
-    write_results_csv(per_seq_rows, f"{OUTPUT_DIR}/sweep_results.csv")
-    save_ade_fde_plot(sweep_results, len(SVO_PATHS), f"{OUTPUT_DIR}/ade_fde_plot.png")
+    write_results_csv(per_seq_rows, f"{OUTPUT_DIR}/sweep_phase_{PHASE}.csv")
+    save_ade_fde_plot(sweep_results, len(SVO_PATHS), f"{OUTPUT_DIR}/ade_fde_phase_{PHASE}.png")
 
     if VISUALIZE:
         best = min(sweep_results, key=lambda r: np.mean(r["fde_all"]))
         print(f"\nVisualising best config ({best['config'].name}) on: {seq_names[0]}")
+        cam = open_svo(SVO_PATHS[0])
         vis = FrameVisualizer(
             f"{OUTPUT_DIR}/output.mp4",
-            intrinsics=get_intrinsics(open_svo(SVO_PATHS[0])),
+            intrinsics=get_intrinsics(cam),
         )
+        cam.close()
         run_pipeline(SVO_PATHS[0], yolo_model, config=best["config"], visualizer=vis)

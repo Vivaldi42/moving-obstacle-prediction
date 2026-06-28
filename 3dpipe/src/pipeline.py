@@ -13,6 +13,8 @@ class KFConfig:
     # How much the filter allows velocity to change per frame.
     # Higher = adapts faster to acceleration, lower = smoother but lags on speed changes.
     velocity_process_noise: float = 0.01
+    # How much the filter allows position to deviate from the physics model per frame.
+    position_process_noise: float = 0.0001
     # Camera measurement noise per axis (variance in m²).
     # From ZED static analysis: X std=0.8cm, Y std=1.1cm, Z std=0.8cm.
     measurement_noise_x: float = 0.001
@@ -179,9 +181,10 @@ class BallKalmanFilter:
             [0, 0, 1, 0, 0, 0],
         ], dtype=np.float32)
 
+        ppn = config.position_process_noise
         vpn = config.velocity_process_noise
         self.kf.processNoiseCov = np.diag(
-            [0.0001, 0.0001, 0.0001, vpn, vpn, vpn]
+            [ppn, ppn, ppn, vpn, vpn, vpn]
         ).astype(np.float32)
 
         self.kf.measurementNoiseCov = np.diag(
