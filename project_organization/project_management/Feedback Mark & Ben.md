@@ -1,3 +1,9 @@
+# 15.06.2026
+- In section Reflection, add learning outcomes and example evidences.
+- Keeping the system on the edge eliminates privacy concerns.
+- You can extend the system by addining acceleration or >1 object.
+- Linear systems are easy for KF, but non-linear systems are challenging.
+
 # 09.06.2026
 - In the project report:
   - Add a section answering the research questions.

@@ -1,6 +1,6 @@
 ## Main Question
 
-How can a modular 3D depth-based perception system reliably detect, track and predict the motion of dynamic obstacles in mobile robotics?”
+How can a modular 3D depth-based perception system reliably detect, track and predict the motion of dynamic obstacles in mobile robotics?
 
 Modular in this case means the detection, tracking and prediction components can be developed, tested and replaced independently without requiring changes to the other components.
 ## Sub-Questions
@@ -13,7 +13,7 @@ RQ3 - What evaluation criteria are suitable for assessing dynamic obstacle perce
 
 RQ4 - What existing methods and algorithms address dynamic obstacle detection, tracking and prediction, and how do they compare?
 
-
+RQ5 - How can Kalman filters be used to develop the system?
 
 ---
 ## Project Goal
