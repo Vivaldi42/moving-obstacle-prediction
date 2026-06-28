@@ -27,18 +27,17 @@ PREDICTION_HORIZON = 0.2
 PREDICTION_STEPS = round(PREDICTION_HORIZON * FPS)
 MAX_MISSED = 5
 VISUALIZE = True
-PHASE = 2
+PHASE = 3
 
 _ZED_X = 0.008 ** 2
 _ZED_Y = 0.011 ** 2
 _ZED_Z = 0.008 ** 2
 
 CONFIGS = [
-    KFConfig(name=f"ppn_{ppn}",
+    KFConfig(name="optimized_cv",
              velocity_process_noise=0.02,
-             position_process_noise=ppn,
-             measurement_noise_x=_ZED_X, measurement_noise_y=_ZED_Y, measurement_noise_z=_ZED_Z)
-    for ppn in [1e-5, 5e-5, 1e-4, 5e-4, 1e-3, 5e-3]
+             position_process_noise=0.0001,
+             measurement_noise_x=_ZED_X, measurement_noise_y=_ZED_Y, measurement_noise_z=_ZED_Z),
 ]
 
 
