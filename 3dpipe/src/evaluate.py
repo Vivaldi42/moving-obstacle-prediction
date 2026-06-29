@@ -15,25 +15,25 @@ from metrics import (
 )
 from visualizer import FrameVisualizer
 
-SVO_PATHS = [
-    "/datasets/Dataset_2/Clean/HD1080_one_ball_straight_line_21-34-15.svo2",
-    "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-29.svo2",
-    "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-44.svo2",
-    "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-05.svo2",
-    "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-18.svo2",
-    "/datasets/Dataset_2/Clean/HD1080_ball_behind_box_21-40-04.svo2",
-    "/datasets/Dataset_2/Clean/HD1080_ball_up_a_ramp_21-46-08.svo2",
-    "/datasets/Dataset_2/Clean/HD1080_ball_up_a_ramp_and_back_21-45-51.svo2",
-    "/datasets/Dataset_2/Clean/HD1080_bouncing_ball_21-41-37.svo2",
-    "/datasets/Dataset_2/Clean/HD1080_bouncing_ball_hit_window_21-42-41.svo2",
-]
+# SVO_PATHS = [
+#     # "/datasets/Dataset_2/Clean/HD1080_one_ball_straight_line_21-34-15.svo2",
+#     # "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-29.svo2",
+#     # "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-34-44.svo2",
+#     "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-05.svo2",
+#     # "/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-18.svo2",
+#     # "/datasets/Dataset_2/Clean/HD1080_ball_behind_box_21-40-04.svo2",
+#     # "/datasets/Dataset_2/Clean/HD1080_ball_up_a_ramp_21-46-08.svo2",
+#     # "/datasets/Dataset_2/Clean/HD1080_ball_up_a_ramp_and_back_21-45-51.svo2",
+#     # "/datasets/Dataset_2/Clean/HD1080_bouncing_ball_21-41-37.svo2",
+#     # "/datasets/Dataset_2/Clean/HD1080_bouncing_ball_hit_window_21-42-41.svo2",
+# ]
 OUTPUT_DIR = "/app/output"
 FPS = 30
 PREDICTION_HORIZON = 0.2
 PREDICTION_STEPS = round(PREDICTION_HORIZON * FPS)
 MAX_MISSED = 5
 VISUALIZE = True
-PHASE = 4
+# PHASE = 4
 
 _ZED_X = 0.008 ** 2
 _ZED_Y = 0.011 ** 2
@@ -86,6 +86,7 @@ def run_pipeline(svo_path, yolo_model, config=None, visualizer=None):
         kf = BallKalmanFilter(dt=1 / FPS, config=config)
 
     ground_truth, predictions = {}, {}
+    past_predictions: dict[int, tuple[float, float, float]] = {}
     frame_index = missed = corrections = 0
     latencies, ram_samples = [], []
     process = psutil.Process()
@@ -115,12 +116,15 @@ def run_pipeline(svo_path, yolo_model, config=None, visualizer=None):
         if corrections >= 2 and missed < MAX_MISSED:
             pred_sequence = [kf.predict_ahead(s / FPS) for s in range(1, PREDICTION_STEPS + 1)]
             predictions[frame_index] = pred_sequence
+            past_predictions[frame_index + PREDICTION_STEPS] = pred_sequence[-1]
+
+        past_pred = past_predictions.pop(frame_index, None)
 
         latencies.append((time.perf_counter() - t_frame) * 1000)
         ram_samples.append(process.memory_info().rss / 1e6)
 
         if visualizer is not None:
-            visualizer.draw_frame(left_rgb, smoothed_xyz, kf, pred_sequence, missed)
+            visualizer.draw_frame(left_rgb, smoothed_xyz, kf, past_pred, missed)
 
         frame_index += 1
 

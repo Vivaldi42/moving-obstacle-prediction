@@ -48,7 +48,7 @@ class FrameVisualizer:
         frame_rgb: np.ndarray,
         smoothed_xyz: tuple[float, float, float] | None,
         kf: BallKalmanFilter,
-        pred_sequence: list[tuple[float, float, float]] | None,
+        past_pred_xyz: tuple[float, float, float] | None,
         missed: int,
     ) -> None:
         frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
@@ -62,60 +62,61 @@ class FrameVisualizer:
                 *current_xyz, self.fx, self.fy, self.cx, self.cy,
             )
 
+        color = (0x3C, 0x63, 0x01) if detected else (0x04, 0x89, 0xFF)
         if current_pixel is not None:
-            self.trail.append(current_pixel)
+            self.trail.append((current_pixel, color))
 
         self._draw_trail(frame_bgr)
-        self._draw_current(frame_bgr, current_pixel, label_xyz, detected)
-        self._draw_prediction(frame_bgr, current_pixel, pred_sequence)
+        self._draw_current(frame_bgr, current_pixel, label_xyz, color)
+        self._draw_prediction(frame_bgr, current_pixel, past_pred_xyz)
         self._writer.write(frame_bgr)
 
     def _draw_trail(self, frame_bgr: np.ndarray) -> None:
         for i in range(1, len(self.trail)):
-            cv2.line(frame_bgr, self.trail[i - 1], self.trail[i], (0, 255, 0), 2)
+            cv2.line(frame_bgr, self.trail[i - 1][0], self.trail[i][0], self.trail[i][1], 2)
 
     def _draw_current(
         self,
         frame_bgr: np.ndarray,
         pixel: tuple[int, int] | None,
         label_xyz: tuple[float, float, float] | None,
-        detected: bool,
+        color: tuple[int, int, int],
     ) -> None:
         if pixel is None:
             return
-        color = (0, 255, 0) if detected else (0, 165, 255)
-        cv2.circle(frame_bgr, pixel, 15, color, 3)
+        cv2.circle(frame_bgr, pixel, 12, color, -1)
         if label_xyz is not None:
             lx, ly, lz = label_xyz
             cv2.putText(
-                frame_bgr, f"x:{lx:.2f} y:{ly:.2f} z:{lz:.2f}m",
+                frame_bgr, f"({lx:.2f}, {ly:.2f}, {lz:.2f})",
                 (pixel[0] + 20, pixel[1]),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2,
             )
+
+    _PRED_COLOR = (0x94, 0x01, 0x8A)
 
     def _draw_prediction(
         self,
         frame_bgr: np.ndarray,
         current_pixel: tuple[int, int] | None,
-        pred_sequence: list[tuple[float, float, float]] | None,
+        past_pred_xyz: tuple[float, float, float] | None,
     ) -> None:
-        if pred_sequence is None:
-            return
-        px, py, pz = pred_sequence[-1]
-        pred_pixel = project_to_pixel(px, py, pz, self.fx, self.fy, self.cx, self.cy)
-        if pred_pixel is None:
-            return
-        self.pred_trail.append(pred_pixel)
+        if past_pred_xyz is not None:
+            px, py, pz = past_pred_xyz
+            pred_pixel = project_to_pixel(px, py, pz, self.fx, self.fy, self.cx, self.cy)
+            if pred_pixel is not None:
+                self.pred_trail.append(pred_pixel)
+                cv2.circle(frame_bgr, pred_pixel, 12, self._PRED_COLOR, -1)
+                if current_pixel is not None:
+                    cv2.line(frame_bgr, current_pixel, pred_pixel, (0, 0, 0), 2)
+                cv2.putText(
+                    frame_bgr, f"({px:.2f}, {py:.2f}, {pz:.2f})",
+                    (pred_pixel[0] + 20, pred_pixel[1]),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, self._PRED_COLOR, 2,
+                )
+
         for i in range(1, len(self.pred_trail)):
-            cv2.line(frame_bgr, self.pred_trail[i - 1], self.pred_trail[i], (0, 0, 255), 2)
-        cv2.circle(frame_bgr, pred_pixel, 15, (0, 0, 255), 3)
-        if current_pixel is not None:
-            cv2.line(frame_bgr, current_pixel, pred_pixel, (0, 0, 255), 2)
-        cv2.putText(
-            frame_bgr, f"x:{px:.2f} y:{py:.2f} z:{pz:.2f}m +{self.prediction_horizon}s",
-            (pred_pixel[0] + 20, pred_pixel[1]),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2,
-        )
+            cv2.line(frame_bgr, self.pred_trail[i - 1], self.pred_trail[i], self._PRED_COLOR, 2)
 
     def release(self) -> None:
         self._writer.release()
