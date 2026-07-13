@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 .venv/
+.claude/
 debug_frames/
 *.mp4
 *.csv
