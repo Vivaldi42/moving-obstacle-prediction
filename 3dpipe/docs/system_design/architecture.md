@@ -29,7 +29,7 @@ flowchart TD
 
         POS --> PRED
 
-        subgraph KF["BallKalmanFilter: x, y, z, vx, vy, vz"]
+        subgraph KF["BallKalmanFilter (CV) / BallKalmanFilterCA (CA)"]
             PRED["predict() + correct()
             filtered position"]
             PRED --> AHEAD["predict_ahead(0.2s)
@@ -44,16 +44,16 @@ flowchart TD
         predicted pixel"]
 
         P2P_CUR --> VID["Annotated MP4
-        - green trail: actual
-        - red trail: predicted
-        - colour ring: error magnitude"]
+        - green trail: tracked positions
+        - purple trail: predicted positions
+        - filled circles at current and predicted"]
         P2P_PRED --> VID
 
         POS --> CSV["ground_truth.csv
         predictions.csv"]
         AHEAD --> CSV
 
-        CSV --> PLOT["fde_plot.png
-        Mean / Max FDE"]
+        CSV --> PLOT["ade_fde_phase_N.png
+        Mean ADE / Mean FDE"]
     end
 ```

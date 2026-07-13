@@ -40,7 +40,7 @@ The system runs as a per-frame loop with three stages:
 
 The diagram below shows how data flows through the pipeline. The camera (or SVO2 recording) is the single input source. Each frame provides both an RGB image and an XYZ depth map to the perception stage. The Kalman filter receives one 3D measurement per frame, updates its state and produces a predicted trajectory. Both the raw measurements and predictions are written to CSV for evaluation. An annotated video is produced as a visual output.
 
-![Pipeline architecture: three stages (perception, state estimation and output) connected by data flow from camera input to annotated video and recorded trajectories. YOLO v8x and ZED stereo depth estimation are fused into a 3D position, which a Kalman filter uses to track position and velocity and extrapolate 0.2 s ahead.](../report/system_design.png)
+![Pipeline architecture: three stages (perception, state estimation and output) connected by data flow from camera input to annotated video and recorded trajectories. YOLO v8x and ZED stereo depth estimation are fused into a 3D position, which a Kalman filter uses to track position and velocity and extrapolate 0.2 s ahead.](../project_report/system_design.png)
 
 ---
 
@@ -141,20 +141,61 @@ Values in $R$ encode how much the filter trusts each camera measurement. Higher 
 
 A full derivation of the predict-correct equations and the Kalman gain is in the Kalman Filter document.
 
+### Constant-acceleration variant
+
+A second Kalman filter variant (`BallKalmanFilterCA`) was implemented and evaluated in Phase 4. It extends the state vector with acceleration terms:
+
+$$\mathbf{x}_{CA} = [x,\ y,\ z,\ v_x,\ v_y,\ v_z,\ a_x,\ a_y,\ a_z]^T$$
+
+The transition matrix is extended to apply the kinematic equations for constant acceleration:
+
+$$F_{CA} = \begin{bmatrix}
+1 & 0 & 0 & \Delta t & 0 & 0 & \frac{\Delta t^2}{2} & 0 & 0 \\
+0 & 1 & 0 & 0 & \Delta t & 0 & 0 & \frac{\Delta t^2}{2} & 0 \\
+0 & 0 & 1 & 0 & 0 & \Delta t & 0 & 0 & \frac{\Delta t^2}{2} \\
+0 & 0 & 0 & 1 & 0 & 0 & \Delta t & 0 & 0 \\
+0 & 0 & 0 & 0 & 1 & 0 & 0 & \Delta t & 0 \\
+0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & \Delta t \\
+0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1
+\end{bmatrix}$$
+
+The process noise matrix gains a third configurable parameter, $q_a$ (acceleration process noise), controlling how quickly the filter allows acceleration to change:
+
+$$Q_{CA} = \text{diag}([q_p,\ q_p,\ q_p,\ q_v,\ q_v,\ q_v,\ q_a,\ q_a,\ q_a])$$
+
+The observation matrix and measurement noise matrix are the same as the CV variant - only position is measured.
+
+Phase 4 evaluation found that the CV model matched the best CA configuration on a diagonal throw sequence (0.72 cm vs 0.71 cm mean ADE). Higher values of $q_a$ degraded performance rather than improving it, suggesting that the constant-velocity assumption holds well enough for smooth trajectories that the additional degrees of freedom in the CA model provide no benefit. The CV model is used as the reference configuration.
+
 ### Noise parameters and configurations
 
-Four configurations were evaluated, varying the velocity process noise and measurement noise independently:
+Evaluation was conducted in phases. Phases 1-3 swept four constant-velocity configurations, varying velocity process noise and measurement noise independently. Phase 4 compared the best CV configuration against five constant-acceleration variants.
 
-| Configuration | vel process noise ($q_v$) | $r_x$ (m²) | $r_y$ (m²) | $r_z$ (m²) |
-|--------------|--------------------------|-----------|-----------|-----------|
+**Phases 1-3 - CV configurations:**
+
+| Configuration | $q_v$ | $r_x$ (m²) | $r_y$ (m²) | $r_z$ (m²) |
+|--------------|-------|-----------|-----------|-----------|
 | baseline | 0.01 | 0.001 | 0.001 | 0.001 |
 | zed_noise | 0.01 | 0.000064 | 0.000121 | 0.000064 |
 | high_vel | 0.1 | 0.001 | 0.001 | 0.001 |
 | zed_noise_high_vel | 0.1 | 0.000064 | 0.000121 | 0.000064 |
 
-The `zed_noise` measurement values are derived from the static ZED accuracy experiment (standard deviation: X = 0.8 cm, Y = 1.1 cm, Z = 0.8 cm, converted to variance in m²). The baseline uses 0.001 m² per axis, which corresponds to approximately 3.2 cm standard deviation - higher than the actual ZED accuracy, so the baseline trusts the model more than necessary.
+The `zed_noise` measurement values are derived from the static ZED accuracy experiment (standard deviation: X = 0.8 cm, Y = 1.1 cm, Z = 0.8 cm, converted to variance in m²). All three non-baseline configurations achieved equivalent prediction accuracy, each slightly better than baseline.
 
-The `high_vel` process noise of 0.1 allows velocity to adapt faster to acceleration. The `zed_noise_high_vel` configuration combines both changes. Evaluation results show all three non-baseline configurations achieve equivalent prediction accuracy, each slightly better than baseline. Details are in the Project Report and sweep_results.csv.
+**Phase 4 - CV vs CA configurations** (all use ZED-calibrated measurement noise):
+
+| Configuration | Model | $q_v$ | $q_a$ | $r_x$ (m²) | $r_y$ (m²) | $r_z$ (m²) |
+|--------------|-------|-------|-------|-----------|-----------|-----------|
+| cv_optimized | CV | 0.02 | - | 0.000064 | 0.000121 | 0.000064 |
+| ca_apn_0.01 | CA | 0.02 | 0.01 | 0.000064 | 0.000121 | 0.000064 |
+| ca_apn_0.05 | CA | 0.02 | 0.05 | 0.000064 | 0.000121 | 0.000064 |
+| ca_apn_0.1 | CA | 0.02 | 0.1 | 0.000064 | 0.000121 | 0.000064 |
+| ca_apn_0.5 | CA | 0.02 | 0.5 | 0.000064 | 0.000121 | 0.000064 |
+| ca_apn_1.0 | CA | 0.02 | 1.0 | 0.000064 | 0.000121 | 0.000064 |
+
+These are the configurations currently active in `src/evaluate.py`. Full per-sequence results are in `output/sweep_phase_4.csv`.
 
 ### Per-frame cycle
 
@@ -170,7 +211,7 @@ The corrections threshold of 2 ensures the velocity estimate has had at least on
 
 ### Coasting
 
-If detection fails for up to `MAX_MISSED = 5` consecutive frames, the filter continues on the predict step only. The state advances using the constant-velocity motion model without any correction. Predictions are still issued during coasting. If 5 frames pass without a detection, prediction output is suppressed until the object is re-detected and the filter is re-initialized.
+If detection fails for up to `MAX_MISSED = 5` consecutive frames, the filter continues on the predict step only. The state advances using the active motion model (CV or CA) without any correction. Predictions are still issued during coasting. If 5 frames pass without a detection, prediction output is suppressed until the object is re-detected and the filter is re-initialized.
 
 ### Initialization
 
@@ -184,13 +225,19 @@ Zero initial velocity is assumed because there is no information to estimate it 
 
 ## Prediction
 
-Forward prediction is computed by linear extrapolation from the current filter state after the correct step:
+Forward prediction is computed by extrapolation from the current filter state after the correct step. The formula depends on the active motion model.
+
+**Constant-velocity (CV):**
 
 $$\hat{p}(h) = \begin{bmatrix} x + v_x h \\ y + v_y h \\ z + v_z h \end{bmatrix}$$
 
-where $(x, y, z)$ and $(v_x, v_y, v_z)$ are taken from the current filter state, and $h$ is the horizon in seconds. Six predictions are computed per frame at $h = 1/30, 2/30, \ldots, 6/30$ seconds. The final step at $h = 0.2$ s is the primary output.
+**Constant-acceleration (CA):**
 
-**Why linear extrapolation and not repeated predict steps:** running the KF predict step forward 6 times would also advance the covariance matrix, corrupting the filter's uncertainty estimate for subsequent measurements. Linear extrapolation gives an identical result under the constant-velocity model while leaving the filter state unchanged.
+$$\hat{p}(h) = \begin{bmatrix} x + v_x h + \frac{1}{2} a_x h^2 \\ y + v_y h + \frac{1}{2} a_y h^2 \\ z + v_z h + \frac{1}{2} a_z h^2 \end{bmatrix}$$
+
+In both cases $(x, y, z)$, $(v_x, v_y, v_z)$ and, for CA, $(a_x, a_y, a_z)$ are taken from the current filter state. Six predictions are computed per frame at $h = 1/30, 2/30, \ldots, 6/30$ seconds. The final step at $h = 0.2$ s is the primary output.
+
+**Why extrapolation and not repeated predict steps:** running the KF predict step forward 6 times would also advance the covariance matrix, corrupting the filter's uncertainty estimate for subsequent measurements. Extrapolation gives an identical result under either motion model while leaving the filter state unchanged.
 
 **Limitation:** the extrapolation does not propagate uncertainty. The predicted position has no attached confidence interval. Uncertainty grows with the horizon, but this is not reflected in the output.
 
@@ -207,15 +254,15 @@ The pipeline produces three outputs per evaluation run.
 | Tracked position trail | Green | Recent smoothed positions |
 | Current position circle | Green | Valid detection this frame |
 | Current position circle | Orange | Coasting - no detection, Kalman predicted position used |
-| Predicted position trail | Red | Recent 0.2 s ahead predictions |
-| Predicted position circle | Red | Predicted position 0.2 s ahead this frame |
-| Position labels | - | Current x, y, z values and predicted x, y, z with `+0.2s` tag |
+| Predicted position trail | Purple | Recent 0.2 s ahead predictions |
+| Predicted position circle | Purple | Predicted position 0.2 s ahead this frame |
+| Position labels | - | Current (x, y, z) next to the tracked circle; predicted (x, y, z) next to the prediction circle |
 
 **ground_truth.csv** - one row per detected frame: frame index and raw (x, y, z) position from the front-face sampling step. This is the pipeline's own localization output, not an independent ground truth.
 
 **predictions.csv** - one row per frame with a valid prediction: frame index and the full 6-step predicted position sequence.
 
-These two files are read by the evaluation script to compute ADE, FDE, latency, throughput and RAM usage per configuration. See sweep_results.csv for aggregated results.
+These two files are read by the evaluation script to compute ADE, FDE, latency, throughput and RAM usage per configuration. Aggregated results per phase are in `output/sweep_phase_N.csv`.
 
 ---
 
@@ -231,7 +278,7 @@ The pipeline is packaged as a Docker container. The container includes all Pytho
 
 **Front-face depth sampling over bbox center lookup:** the prototype used a direct XYZ lookup at the bounding box center pixel. This caused systematic Y errors because floor and background pixels near the bottom of the bbox shifted the apparent position downward. Front-face sampling isolates the object's closest surface and resolves this without segmentation. The static accuracy experiment confirmed a remaining Y bias of -5.0 cm (camera above ball geometry) and Z bias of +4.1 cm (ZED NEURAL depth at close range), both of which are stable and correctable.
 
-**Constant-velocity Kalman filter over higher-order models:** constant velocity is the simplest model that provides both smoothing and velocity estimation from position-only measurements, with no training data or tuning beyond two scalar noise parameters. For short-horizon prediction of smooth trajectories (straight and diagonal throws) it achieves 1.3 cm mean ADE at 0.2 s. A constant-acceleration or ballistic model would improve accuracy for bounces and gravity arcs at the cost of additional parameters.
+**Constant-velocity Kalman filter as the reference configuration:** constant velocity is the simplest model that provides both smoothing and velocity estimation from position-only measurements, with no training data or tuning beyond two scalar noise parameters. For short-horizon prediction of smooth trajectories (straight and diagonal throws) it achieves sub-centimeter mean ADE at 0.2 s. A constant-acceleration variant (`BallKalmanFilterCA`) was also implemented and evaluated in Phase 4. On a diagonal throw sequence, the CV model matched the best CA configuration (0.72 cm vs 0.71 cm mean ADE) and higher acceleration process noise degraded results, confirming that the constant-velocity assumption is sufficient for smooth trajectories. For bouncing or strongly curved trajectories the CA model may offer an advantage, but this was not evaluated.
 
 **Linear extrapolation over repeated KF predict steps:** under a linear constant-velocity model both approaches produce the same predicted position. Linear extrapolation is used to avoid advancing the covariance matrix and corrupting the filter's uncertainty estimate.
 
@@ -243,7 +290,7 @@ The pipeline is packaged as a Docker container. The container includes all Pytho
 
 **Single-object tracking:** the pipeline assumes one object is present at a time. Extending to multi-object tracking requires detection-to-track data association across frames and one independent filter instance per tracked object.
 
-**Constant-velocity model:** the filter does not model acceleration, gravity or bouncing. Curved trajectories or sudden velocity changes cause prediction lag. Thrown or rolling objects on smooth trajectories are handled well, but bounces and rapid direction changes are not.
+**Constant-velocity model as default:** the CV filter does not model acceleration, gravity or bouncing. A constant-acceleration variant is implemented (`BallKalmanFilterCA`) and is the alternative in `evaluate.py`, but Phase 4 evaluation showed no improvement over CV on smooth diagonal trajectories. For bouncing or gravity-dominated trajectories the CA model may be more appropriate, but this has not been tested.
 
 **Ground truth from the same pipeline:** the evaluation ground truth is produced by the same YOLO and ZED pipeline that drives predictions. Systematic errors in detection or depth cancel between the prediction and the future ground truth frame. ADE and FDE likely underestimate true prediction error relative to real-world positions. An evaluation against independently annotated ground truth would give a more accurate picture.
 
