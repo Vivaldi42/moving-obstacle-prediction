@@ -53,10 +53,8 @@ def convert(svo_path: str, output_path: str) -> None:
 
 
 if __name__ == "__main__":
-    # if len(sys.argv) != 3:
-    #     print(f"Usage: {sys.argv[0]} <input.svo2> <output.mp4>")
-    #     sys.exit(1)
-    # convert(sys.argv[1], sys.argv[2])
-
-    convert("/datasets/Dataset_2/Clean/HD1080_one_ball_diagonal_21-35-05.svo2", "./output/raw_video.mp4")
+    if len(sys.argv) != 3:
+        print(f"Usage: {sys.argv[0]} <input.svo2> <output.mp4>")
+        sys.exit(1)
+    convert(sys.argv[1], sys.argv[2])
 
