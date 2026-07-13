@@ -317,14 +317,7 @@ $\mathbf{Q}$ is diagonal - no cross-axis correlations are assumed in the model e
 
 Position rows use $0.0001$ m² ($\sigma = 1$ cm): position changes predictably via $\mathbf{F}$ between frames 33 ms apart.
 
-Velocity rows use $q_v$: velocity can change unexpectedly if the ball accelerates, decelerates or changes direction. Two configurations were evaluated:
-
-| Configuration | $q_v$ | $\sigma_v = \sqrt{q_v}$ | Effect |
-| --- | --- | --- | --- |
-| `baseline`, `zed_noise` | 0.01 | 0.10 m/s | slow velocity adaptation |
-| `high_vel`, `zed_noise_high_vel` | 0.10 | 0.316 m/s | faster velocity adaptation |
-
-Both non-baseline values of $q_v$ produced equivalent prediction accuracy (mean ADE 1.3 cm, mean FDE 2.1 cm), each better than `baseline`. This suggests the constant-velocity model assumption itself was the main ceiling, not the choice of $q_v$.
+Velocity rows use $q_v$: velocity can change unexpectedly if the ball accelerates, decelerates or changes direction. The current `cv_optimized` configuration uses $q_v = 0.02$. Earlier phases swept $q_v \in \{0.01, 0.10\}$ and found equivalent prediction accuracy above the baseline, suggesting the constant-velocity model assumption is the main ceiling rather than the specific choice of $q_v$.
 
 \vspace{\baselineskip}
 
@@ -420,14 +413,13 @@ $\mathbf{R}$ is $3 \times 3$ and diagonal - measurement errors in $x$, $y$ and $
 
 $$\mathbf{R} = \begin{bmatrix} R_x & 0 & 0 \\ 0 & R_y & 0 \\ 0 & 0 & R_z \end{bmatrix}$$
 
-Values for the two configurations evaluated in this project:
+All current configurations use ZED-calibrated measurement noise derived from the static accuracy experiment ($\sigma_x = 0.8$ cm, $\sigma_y = 1.1$ cm, $\sigma_z = 0.8$ cm, converted to variance):
 
-| Configuration | $R_x$ | $R_y$ | $R_z$ | Source |
-| --- | --- | --- | --- | --- |
-| `baseline` | 0.001 m² | 0.001 m² | 0.001 m² | arbitrary default ($\sigma \approx 3.2$ cm) |
-| `zed_noise` | 0.000064 m² | 0.000121 m² | 0.000064 m² | measured from static ZED experiment |
+| $R_x$ | $R_y$ | $R_z$ | Source |
+| --- | --- | --- | --- |
+| 0.000064 m² | 0.000121 m² | 0.000064 m² | measured from static ZED experiment |
 
-The `zed_noise` values are derived from the static accuracy experiment: $\sigma_x = 0.8$ cm, $\sigma_y = 1.1$ cm, $\sigma_z = 0.8$ cm, converted to variance. The `baseline` values over-trust the motion model because they tell the filter the camera is approximately four times noisier than it actually is.
+Earlier phases also evaluated a `baseline` configuration using 0.001 m² per axis (arbitrary default, $\sigma \approx 3.2$ cm). The baseline consistently underperformed the calibrated values because it over-trusts the motion model by treating the camera as approximately four times noisier than it actually is.
 
 ### Step 4 - Update state
 
@@ -486,7 +478,9 @@ $\mathbf{K} \cdot \mathbf{H}$ is $6 \times 6$. $\mathbf{I} - \mathbf{K} \cdot \m
 
 ## Configuration comparison
 
-Four configurations were evaluated, varying two parameters independently: $q_v$ (velocity process noise) and $\mathbf{R}$ (measurement noise).
+Evaluation was conducted in phases. All configurations use a diagonal $\mathbf{Q}$ and $\mathbf{R}$, varying $q_v$ (velocity process noise) and $\mathbf{R}$ (measurement noise).
+
+**Phases 1-3 - CV configurations** (6 sequences):
 
 | Configuration | $q_v$ | $R_x$ (m²) | $R_y$ (m²) | $R_z$ (m²) |
 | --- | --- | --- | --- | --- |
@@ -495,11 +489,20 @@ Four configurations were evaluated, varying two parameters independently: $q_v$ 
 | `high_vel` | 0.10 | 0.001 | 0.001 | 0.001 |
 | `zed_noise_high_vel` | 0.10 | 0.000064 | 0.000121 | 0.000064 |
 
-The `baseline` R values are an arbitrary default ($\sigma \approx 3.2$ cm per axis). The `zed_noise` R values come from the static ZED accuracy experiment: 45 known-position captures gave $\sigma_x = 0.8$ cm, $\sigma_y = 1.1$ cm, $\sigma_z = 0.8$ cm, converted to variance ($R = \sigma^2$).
+The `baseline` R values are an arbitrary default ($\sigma \approx 3.2$ cm per axis). The `zed_noise` values come from the static ZED accuracy experiment ($\sigma_x = 0.8$ cm, $\sigma_y = 1.1$ cm, $\sigma_z = 0.8$ cm). All three non-baseline configurations achieved mean ADE 1.3 cm and mean FDE 2.1 cm, each better than baseline.
 
-$q_v = 0.01$ ($\sigma_v = 0.10$ m/s) represents slow velocity adaptation. $q_v = 0.10$ ($\sigma_v = 0.316$ m/s) allows the filter to respond faster to velocity changes.
+**Phase 4 - current configurations** (1 sequence, CV vs CA comparison):
 
-The two higher-$q_v$ configurations (`high_vel`, `zed_noise_high_vel`) both achieved mean ADE 1.3 cm and mean FDE 2.1 cm, each better than `baseline`. The near-identical results between them suggest the accuracy ceiling was the constant-velocity model assumption, not the choice of $q_v$ or $\mathbf{R}$.
+| Configuration | Model | $q_v$ | $q_a$ | $R_x$ (m²) | $R_y$ (m²) | $R_z$ (m²) |
+| --- | --- | --- | --- | --- | --- | --- |
+| `cv_optimized` | CV | 0.02 | - | 0.000064 | 0.000121 | 0.000064 |
+| `ca_apn_0.01` | CA | 0.02 | 0.01 | 0.000064 | 0.000121 | 0.000064 |
+| `ca_apn_0.05` | CA | 0.02 | 0.05 | 0.000064 | 0.000121 | 0.000064 |
+| `ca_apn_0.1` | CA | 0.02 | 0.1 | 0.000064 | 0.000121 | 0.000064 |
+| `ca_apn_0.5` | CA | 0.02 | 0.5 | 0.000064 | 0.000121 | 0.000064 |
+| `ca_apn_1.0` | CA | 0.02 | 1.0 | 0.000064 | 0.000121 | 0.000064 |
+
+The CV model matched the best CA configuration (0.72 cm vs 0.71 cm mean ADE). Higher $q_a$ degraded results. The CA model's additional degrees of freedom provide no benefit on smooth constant-velocity trajectories. These are the configurations currently active in `src/evaluate.py`.
 
 ---
 
@@ -526,7 +529,7 @@ $$\hat{\mathbf{p}}(h) = \begin{bmatrix} x + v_x \cdot h \\ y + v_y \cdot h \\ z 
 | $v_x, v_y, v_z$ | current velocity from the filter state after the update step |
 | $h$ | prediction horizon in seconds |
 
-The final step at $h = 0.2$ s is the primary output (the red circle in the annotated video). Six steps are computed per frame at 33 ms intervals leading up to 0.2 s.
+The final step at $h = 0.2$ s is the primary output (the purple circle in the annotated video). Six steps are computed per frame at 33 ms intervals leading up to 0.2 s.
 
 **Why linear extrapolation and not repeated predict steps?** Running $\mathbf{F}$ forward six times would advance the covariance matrix $\mathbf{P}$, corrupting the filter's uncertainty estimate for the next real measurement. Under the constant-velocity model, linear extrapolation gives the identical predicted position while leaving $\mathbf{P}$ unchanged.
 
@@ -538,7 +541,7 @@ Predictions are only issued after `corrections >= 2` - ensuring at least one mea
 
 ## Known limitations
 
-- **Constant-velocity model** - the filter does not model acceleration, gravity or bouncing. Curved trajectories or sudden velocity changes cause prediction lag. Straight and diagonal throws are handled well; bounces and rapid direction changes are not.
+- **Motion model limitation** - the CV filter does not model acceleration, gravity or bouncing. A constant-acceleration variant (`BallKalmanFilterCA`) is implemented in `pipeline.py` and evaluated in Phase 4, but showed no improvement on smooth trajectories. For bouncing or gravity-dominated motion it may be more appropriate, but this has not been tested.
 - **No uncertainty on forward prediction** - the predicted position has no confidence interval. Uncertainty grows with the prediction horizon but is not propagated or reported.
 - **Single-object tracking** - one filter instance tracks one object at a time. Multi-object tracking requires data association across frames and one independent filter instance per tracked object.
 - **Ground truth from the same pipeline** - the evaluation ground truth is produced by the same YOLO and ZED pipeline that drives predictions. Systematic errors in detection or depth cancel between the prediction and the future ground truth frame. ADE and FDE likely underestimate true prediction error relative to real-world positions.
