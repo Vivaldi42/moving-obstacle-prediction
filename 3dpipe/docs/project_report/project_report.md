@@ -96,7 +96,7 @@ A Kalman filter tracks an obstacle by maintaining a state of position (x, y, z) 
 
 **RQ4 - How accurately can the short-term future position of an obstacle be predicted from its tracked position and velocity?**
 
-Extrapolating from the tracked position and velocity predicts an obstacle's position a short time ahead with an average error of about 1 cm and a worst-case error of about 2 cm, evaluated on smooth ball trajectories. This is accurate enough for short-horizon obstacle avoidance (<1 s). The approach works best for motion that is linear or at constant velocity. For motion involving bounces or acceleration, prediction accuracy would likely benefit from extending the motion model to account for acceleration. These results and this limitation are discussed further in the sections Evaluation, Results and Conclusions.
+Extrapolating from the tracked position and velocity predicts an obstacle's position a short time ahead with an average error of about 1 cm and a worst-case error of about 2 cm, evaluated on smooth ball trajectories. This is accurate enough for short-horizon obstacle avoidance (<1 s). The approach works best for motion that is linear or at constant velocity. A constant-acceleration variant was subsequently implemented and evaluated in Phase 4, showing no improvement over the CV model on smooth trajectories. These results and this limitation are discussed further in the sections Evaluation, Results and Conclusions.
 
 \vspace{\baselineskip}
 
@@ -123,7 +123,7 @@ The pipeline is containerized using Docker for deployment on the target robotics
 ![Pipeline architecture: three stages (perception, state estimation and output) connected by data flow from camera input to annotated video and recorded trajectories. YOLO v8x and ZED stereo depth estimation are fused into a 3D position, which a Kalman filter uses to track position and velocity and extrapolate 0.2 s ahead.](system_design.png)
 
 
-![Pipeline in action - green trail shows the tracked position, red trail shows the predicted trajectory 0.2 s ahead](prediction_photo.png)
+![Pipeline in action - green trail shows the tracked position, purple trail shows the predicted trajectory 0.2 s ahead](prediction_photo.png)
 
 ---
 
@@ -157,7 +157,7 @@ Multiplying $F$ by the state vector shows what the model predicts for each varia
 
 $$F\mathbf{x} = \begin{bmatrix} x + v_x \Delta t \\ y + v_y \Delta t \\ z + v_z \Delta t \\ v_x \\ v_y \\ v_z \end{bmatrix}$$
 
-A potential improvement of the system would be extending the motion model to account for acceleration.
+A constant-acceleration variant of the filter (`BallKalmanFilterCA`) was subsequently implemented and evaluated in Phase 4 of the project. See the Phase 4 results in the Results section.
 
 \vspace{\baselineskip}
 
@@ -208,7 +208,7 @@ Prediction performance was evaluated by running the pipeline on 6 recorded seque
 - **ADE (average displacement error)** - the mean 3D Euclidean error across all 6 prediction steps leading up to the 0.2 s horizon.
 - **FDE (final displacement error)** - the 3D Euclidean error at the final step only (0.2 s ahead).
 
-Four Kalman filter configurations were tested, varying the process noise and measurement noise parameters. This sweep is described in detail in the Kalman Filter Design and Tuning Document.
+Evaluation was conducted in phases. Phases 1-3 swept four constant-velocity configurations, varying process noise and measurement noise parameters. Phase 4 compared the best CV configuration (`cv_optimized`) against five constant-acceleration (CA) configurations sweeping the acceleration process noise. The CV and CA sweeps are described in detail in the System Design Document.
 
 System performance was also measured per sequence: per-frame latency (mean, 95th percentile and maximum), throughput in frames per second and peak RAM and GPU memory usage.
 
@@ -265,7 +265,24 @@ The table below shows mean ADE and FDE averaged across all 6 sequences for each 
 
 ![Mean ADE and FDE per Kalman filter configuration across all 6 sequences](../../output/ade_fde_plot.png)
 
-The three non-baseline configurations perform equivalently at 1.3 cm mean ADE and 2.1 cm mean FDE, both slightly better than the baseline. The improvement can come from either of two independent changes: calibrating the measurement noise from the static ZED experiment (zed_noise), or raising the process noise to allow faster velocity adaptation (high_vel). Each change alone produces the same gain and combining them (zed_noise_high_vel) yields no further improvement. Latency and throughput are consistent across all configurations, with p95 latency around 9 ms and throughput above 35 fps. Peak RAM usage ranged from 2.6 to 3.2 GB across configurations. Detailed per-sequence results are in the sweep_results.csv output file.
+The three non-baseline configurations perform equivalently at 1.3 cm mean ADE and 2.1 cm mean FDE, both slightly better than the baseline. The improvement can come from either of two independent changes: calibrating the measurement noise from the static ZED experiment (zed_noise), or raising the process noise to allow faster velocity adaptation (high_vel). Each change alone produces the same gain and combining them (zed_noise_high_vel) yields no further improvement. Latency and throughput are consistent across all configurations, with p95 latency around 9 ms and throughput above 35 fps. Peak RAM usage ranged from 2.6 to 3.2 GB across configurations. Detailed per-sequence results are in sweep_phase_1.csv through sweep_phase_3.csv.
+
+### Phase 4 results - CV vs CA
+
+Phase 4 evaluated one CV configuration and five CA configurations on a single diagonal throw sequence, all using ZED-calibrated measurement noise.
+
+| Configuration | Model | Accel. process noise | Mean ADE | Mean FDE | Latency p95 | Throughput |
+|--------------|-------|---------------------|---------|---------|------------|-----------|
+| cv_optimized | CV | - | 0.72 cm | 1.10 cm | 8.98 ms | 31.9 fps |
+| ca_apn_0.01 | CA | 0.01 | 0.71 cm | 1.08 cm | 8.85 ms | 32.1 fps |
+| ca_apn_0.05 | CA | 0.05 | 0.72 cm | 1.10 cm | 9.12 ms | 35.4 fps |
+| ca_apn_0.1 | CA | 0.1 | 0.74 cm | 1.13 cm | 12.01 ms | 30.8 fps |
+| ca_apn_0.5 | CA | 0.5 | 0.81 cm | 1.29 cm | 8.96 ms | 35.7 fps |
+| ca_apn_1.0 | CA | 1.0 | 0.86 cm | 1.41 cm | 8.81 ms | 35.8 fps |
+
+![Mean ADE and FDE per configuration - Phase 4 CV vs CA comparison](../../output/ade_fde_phase_4.png)
+
+The CV model matched the best CA configuration (0.72 cm vs 0.71 cm mean ADE). Higher acceleration process noise degraded results, as the CA model introduces unnecessary degrees of freedom for a smooth constant-velocity trajectory. The CV model is recommended as the default for smooth-trajectory sequences. The CA variant may be more appropriate for sequences involving bouncing or rapidly changing direction, which were not evaluated in this phase. Detailed results are in sweep_phase_4.csv.
 
 ---
 
@@ -295,7 +312,7 @@ The pipeline demonstrates that a ZED stereo camera and YOLO v8x can provide suff
 
 \vspace{\baselineskip}
 
-**The constant-velocity model is the main limiting assumption.** The model performs well on straight-line and diagonal throws but will lag on bounces, accelerating motion or curved trajectories. For applications where the obstacle exhibits non-linear motion, a more expressive motion model such as one accounting for acceleration would be the natural next step.
+**The constant-velocity model is the main limiting assumption.** The model performs well on straight-line and diagonal throws but will lag on bounces, accelerating motion or curved trajectories. A constant-acceleration variant was implemented and evaluated in Phase 4 but showed no benefit over CV for smooth trajectories. For applications where the obstacle exhibits strongly non-linear motion, the CA model or a more expressive approach remains a candidate, but requires evaluation on non-linear sequences.
 
 ---
 
