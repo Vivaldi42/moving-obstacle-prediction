@@ -11,7 +11,7 @@ services:
       NVIDIA_DRIVER_CAPABILITIES: all
     volumes:
       - .:/app:rw
-      - /home/vladi/Documents/ZED:/datasets:rw
+      - ${ZED_DATASET_PATH:-/data/ZED}:/datasets:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - zed-resources-x86:/usr/local/zed/resources
     command: >
@@ -34,7 +34,7 @@ services:
       QT_X11_NO_MITSHM: "1"
     volumes:
       - .:/app:rw
-      - /home/vladi/Documents/ZED:/datasets:ro
+      - ${ZED_DATASET_PATH:-/data/ZED}:/datasets:ro
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - zed-resources-jetson:/usr/local/zed/resources
     command: >
