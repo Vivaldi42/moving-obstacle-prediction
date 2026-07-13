@@ -75,30 +75,6 @@ FDE measures prediction drift at the end of the prediction horizon.
 
 ---
 
-# Tracking Quality Metrics
-
-## 3. Track Completeness (TC)
-
-**What it measures:** Percentage of frames in which the object has a valid track assigned. Characterizes tracking continuity and dropout frequency.
-
-**Formula:**
-
-$$
-\text{TC} = \frac{\text{frames with valid track}}{\text{total visible frames}} \times 100
-$$
-
-Where:
-- valid track = object successfully tracked
-- visible frames = frames where the object is observable in the sequence
-
-**Unit:** percentage (%)
-
-**Reported as:** per sequence and overall mean across all sequences
-
-Higher values indicate more stable tracking continuity.
-
----
-
 # System Performance Metrics
 
 ## 4. Latency
@@ -180,10 +156,9 @@ The major focus of the project is evaluating ADE and FDE.
 | ----- | ------------------------------ | ------- | ---------------------- | ------- | ------------------------------ |
 | **1** | **Average Displacement Error** | **ADE** | **Prediction quality** | **m**   | **mean per seq, overall mean** |
 | **2** | **Final Displacement Error**   | **FDE** | **Prediction quality** | **m**   | **mean per seq, overall mean** |
-| 3     | Track Completeness (secondary) | TC      | Tracking quality       | %       | per seq, overall mean          |
-| 4     | Latency                        | -       | System performance     | ms      | mean, p95, max                 |
-| 5     | Throughput                     | FPS     | System performance     | FPS     | mean FPS                       |
-| 6     | Memory Usage                   | -       | System performance     | MB / GB | mean and peak                  |
+| 3     | Latency                        | -       | System performance     | ms      | mean, p95, max                 |
+| 4     | Throughput                     | FPS     | System performance     | FPS     | mean FPS                       |
+| 5     | Memory Usage                   | -       | System performance     | MB / GB | mean and peak                  |
 
 ---
 
@@ -193,8 +168,6 @@ The following limitations apply to this evaluation framework and should be consi
 
 **Ground truth accuracy.** Ground truth trajectories are derived from future observed object positions within the same recorded sequence, extracted by the same perception pipeline under evaluation. This means ground truth is subject to the same depth noise and segmentation errors as the predictions being evaluated. Results therefore reflect error relative to a noisy reference, not absolute positional accuracy.
 
-**Track Completeness definition.** The boundary between visible and non-visible frames is not formally defined. Edge cases such as partial occlusion or objects at the frame boundary are handled by judgment during annotation, which introduces inconsistency.
-
-**No detection quality metric.** Detection failures are not directly measured. Missed detections manifest indirectly as lower TC scores but are not isolated or quantified independently.
+**No detection quality metric.** Detection failures are not directly measured. Missed detections are not isolated or quantified independently.
 
 **Statistical reliability.** The number of sequences per scenario is not fixed. Reported means across a small number of sequences should be interpreted with caution.
